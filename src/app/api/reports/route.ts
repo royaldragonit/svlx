@@ -9,9 +9,34 @@ function serializeBigInt<T>(data: T): T {
   );
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const search = searchParams.get("search")?.trim() || "";
+  const sort = searchParams.get("sort")?.trim() || "latest"; // "latest" | "most_commented"
+
+  const where: any = {};
+
+  if (search) {
+    where.OR = [
+      { plateNumber: { contains: search, mode: "insensitive" } },
+      { title: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+      { location: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  const orderBy: any[] = [];
+
+  if (sort === "most_commented") {
+    orderBy.push({ comments: { _count: "desc" } });
+    orderBy.push({ createdAt: "desc" });
+  } else {
+    orderBy.push({ createdAt: "desc" });
+  }
+
   const reports = await db.carReport.findMany({
-    orderBy: { createdAt: "desc" },
+    where,
+    orderBy,
     take: 50,
     include: {
       author: true,
@@ -40,7 +65,8 @@ export async function POST(req: NextRequest) {
       carType: body.carType ?? "",
       location: body.location ?? "",
       mainImageUrl: mainImage,
-      categoryTag: body.tags ?? null,
+      // categoryTag bỏ ý nghĩa, có thể để null luôn:
+      categoryTag: null,
       media: {
         create: media.map((m: any) => ({
           mediaType: m.kind,

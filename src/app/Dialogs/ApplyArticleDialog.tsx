@@ -44,6 +44,12 @@ import {
   publishBtn,
 } from "./ApplyArticleDialogStyles";
 
+type MediaPayload = {
+  kind: "image" | "video";
+  url: string;
+  file?: File | null;
+};
+
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -55,7 +61,7 @@ type Props = {
     time: string;
     meridiem: "AM" | "PM";
     scheduled: boolean;
-    media: { kind: "image" | "video"; url: string }[];
+    media: MediaPayload[];
   }) => void;
 };
 
@@ -63,6 +69,7 @@ type MediaItem = {
   id: string;
   kind: "image" | "video";
   url: string;
+  file: File | null;
 };
 
 export default function ApplyArticleDialog({ open, onClose, onPublish }: Props) {
@@ -75,20 +82,6 @@ export default function ApplyArticleDialog({ open, onClose, onPublish }: Props) 
   const [scheduled, setScheduled] = React.useState(false);
   const [media, setMedia] = React.useState<MediaItem[]>([]);
 
-  const handlePublish = () => {
-    onPublish?.({
-      title,
-      body,
-      tags,
-      date,
-      time,
-      meridiem,
-      scheduled,
-      media: media.map((m) => ({ kind: m.kind, url: m.url })),
-    });
-    onClose();
-  };
-
   const hasImage = React.useMemo(
     () => media.some((m) => m.kind === "image"),
     [media]
@@ -100,18 +93,50 @@ export default function ApplyArticleDialog({ open, onClose, onPublish }: Props) 
 
   const genId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-  const handleAddImage = (url: string) => {
+  const handleAddImage = (url: string, file?: File) => {
     if (hasImage) return;
-    setMedia((prev) => [...prev, { id: genId(), kind: "image", url }]);
+    setMedia((prev) => [
+      ...prev,
+      { id: genId(), kind: "image", url, file: file ?? null },
+    ]);
   };
 
-  const handleAddVideo = (url: string) => {
+  const handleAddVideo = (url: string, file?: File) => {
     if (hasVideo) return;
-    setMedia((prev) => [...prev, { id: genId(), kind: "video", url }]);
+    setMedia((prev) => [
+      ...prev,
+      { id: genId(), kind: "video", url, file: file ?? null },
+    ]);
   };
 
   const handleRemoveMedia = (id: string) => {
     setMedia((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  const handlePublish = () => {
+    onPublish?.({
+      title,
+      body,
+      tags,
+      date,
+      time,
+      meridiem,
+      scheduled,
+      media: media.map((m) => ({
+        kind: m.kind,
+        url: m.url,
+        file: m.file,
+      })),
+    });
+
+    onClose();
+    setTitle("");
+    setBody("");
+    setTags("");
+    setDate("");
+    setTime("");
+    setScheduled(false);
+    setMedia([]);
   };
 
   return (
@@ -142,6 +167,7 @@ export default function ApplyArticleDialog({ open, onClose, onPublish }: Props) 
               onAddVideo={handleAddVideo}
             />
           </Box>
+
           <Box sx={attachInRich}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <AttachFileOutlinedIcon sx={{ fontSize: 20, color: "#8AB4F8" }} />
@@ -202,7 +228,6 @@ export default function ApplyArticleDialog({ open, onClose, onPublish }: Props) 
               ))}
             </Box>
           </Box>
-
         </Box>
       </DialogContent>
 

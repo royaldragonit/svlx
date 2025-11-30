@@ -83,31 +83,46 @@ export default function HomePageClient() {
   const [user, setUser] = useState<{ name: string; avatarUrl?: string } | null>(null);
 
   useEffect(() => {
-    const fetchReports = async () => {
-      const res = await fetch("/api/reports");
-      const data = await res.json();
-      const mapped: CarUiItem[] = data.map(mapReportToCarUiItem);
-      setCars(mapped);
+    const controller = new AbortController();
+
+    const timeout = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams();
+        if (searchTerm) params.set("search", searchTerm);
+
+        // sort theo tab:
+        // tab 0 = latest, tab 1 = most_commented
+        if (selectedTab === 1) {
+          params.set("sort", "most_commented");
+        } else {
+          params.set("sort", "latest");
+        }
+
+        const qs = params.toString();
+        const url = qs ? `/api/reports?${qs}` : "/api/reports";
+
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) return;
+        const data = await res.json();
+        const mapped: CarUiItem[] = data.map(mapReportToCarUiItem);
+        setCars(mapped);
+        setPage(1);
+      } catch (e: any) {
+        if (e?.name === "AbortError") return;
+        console.error(e);
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
     };
+  }, [searchTerm, selectedTab]);
 
-    fetchReports();
-  }, []);
-
-  const filteredCars = cars
-    .filter((car) =>
-      `${car.plateNumber} ${car.name}`.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .filter((car) =>
-      selectedTab === 0
-        ? car.reportCategory === "Mới Cập Nhật"
-        : car.reportCategory === "Nhiều Report"
-    );
 
   const itemsPerPage = 3;
-  const totalPages = Math.max(1, Math.ceil(filteredCars.length / itemsPerPage));
-  const pagedCars = filteredCars.slice((page - 1) * itemsPerPage, page * itemsPerPage);
-
-  useEffect(() => setPage(1), [searchTerm, selectedTab]);
+  const totalPages = Math.max(1, Math.ceil(cars.length / itemsPerPage));
+  const pagedCars = cars.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   const toggleLike = (name: string) => {
     setLiked((prev) => ({ ...prev, [name]: !prev[name] }));
@@ -123,8 +138,8 @@ export default function HomePageClient() {
       type: (f.type.startsWith("image/")
         ? "image"
         : f.type.startsWith("video/")
-        ? "video"
-        : "other") as "image" | "video" | "other",
+          ? "video"
+          : "other") as "image" | "video" | "other",
       name: f.name,
     }));
 
@@ -203,6 +218,7 @@ export default function HomePageClient() {
       const created = await res.json();
       const mapped = mapReportToCarUiItem(created);
       setCars((prev) => [mapped, ...prev]);
+      setPage(1);
     } catch (e) {
       console.error(e);
     }
