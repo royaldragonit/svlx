@@ -1,0 +1,105 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           BigInt   @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  displayName  String
+  avatarUrl    String?
+  rank         String?
+  createdAt    DateTime @default(now())
+
+  carReports   CarReport[]
+  comments     Comment[]
+  likes        UserLike[]
+}
+
+model CarReport {
+  id            BigInt   @id @default(autoincrement())
+  authorId      BigInt
+  plateNumber   String
+  title         String
+  description   String
+  carType       String?
+  location      String?
+  mainImageUrl  String?
+  categoryTag   String?
+  likeCount     Int      @default(0)
+  commentCount  Int      @default(0)
+  shareCount    Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  author        User       @relation(fields: [authorId], references: [id])
+  comments      Comment[]
+  media         ReportMedia[]
+
+  @@index([plateNumber])
+  @@index([categoryTag, createdAt])
+}
+
+model UserLike {
+  userId     BigInt
+  targetType String
+  targetId   BigInt
+  createdAt  DateTime @default(now())
+
+  user       User @relation(fields: [userId], references: [id])
+
+  @@id([userId, targetType, targetId])
+  @@index([targetType, targetId])
+}
+
+model Comment {
+  id         BigInt   @id @default(autoincrement())
+  reportId   BigInt
+  authorId   BigInt
+  content    String
+  createdAt  DateTime @default(now())
+  parentId   BigInt?
+  likeCount  Int      @default(0)
+
+  report     CarReport @relation(fields: [reportId], references: [id])
+  author     User      @relation(fields: [authorId], references: [id])
+
+  parent     Comment?  @relation("CommentToComment", fields: [parentId], references: [id])
+  children   Comment[] @relation("CommentToComment")
+
+  media      CommentMedia[]
+
+  @@index([reportId, createdAt])
+}
+
+model CommentMedia {
+  id          BigInt   @id @default(autoincrement())
+  commentId   BigInt
+  mediaType   String   // 'image' | 'video'
+  url         String
+  fileName    String?
+  durationSec Int?
+  createdAt   DateTime @default(now())
+
+  comment     Comment  @relation(fields: [commentId], references: [id])
+
+  @@unique([commentId, mediaType]) // max 1 image + 1 video/comment
+}
+
+model ReportMedia {
+  id          BigInt   @id @default(autoincrement())
+  reportId    BigInt
+  mediaType   String   // 'image' | 'video'
+  url         String
+  fileName    String?
+  durationSec Int?
+  createdAt   DateTime @default(now())
+
+  report      CarReport @relation(fields: [reportId], references: [id])
+
+  @@index([reportId])
+}
