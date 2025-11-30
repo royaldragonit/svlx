@@ -19,6 +19,12 @@ import { CommentItem } from "./components/Comments/types";
 import CarCard from "./components/CarCard";
 import ApplyArticleDialog from "./Dialogs/ApplyArticleDialog";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import AuthDialog from "./Dialogs/AuthDialog";
+
+type MediaUiItem = {
+  mediaType: "image" | "video" | "other";
+  url: string;
+};
 
 type CarUiItem = {
   id: number;
@@ -35,6 +41,7 @@ type CarUiItem = {
   authorName: string;
   authorRank: string;
   createdAt: string;
+  media: MediaUiItem[];
 };
 
 type PublishPayload = {
@@ -67,6 +74,12 @@ function mapReportToCarUiItem(r: any): CarUiItem {
     authorName: r.author?.displayName ?? "Ẩn danh",
     authorRank: r.author?.rank ?? "Bạc",
     createdAt: r.createdAt,
+    media: Array.isArray(r.media)
+      ? r.media.map((m: any) => ({
+          mediaType: m.mediaType as "image" | "video" | "other",
+          url: m.url as string,
+        }))
+      : [],
   };
 }
 
@@ -81,6 +94,15 @@ export default function HomePageClient() {
   const [comments, setComments] = useState<Record<string, CommentItem[]>>({});
   const [cars, setCars] = useState<CarUiItem[]>([]);
   const [user, setUser] = useState<{ name: string; avatarUrl?: string } | null>(null);
+  const [openAuth, setOpenAuth] = useState(false);
+
+  const ensureLoggedIn = (action: () => void) => {
+    if (!user) {
+      setOpenAuth(true);
+      return;
+    }
+    action();
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -89,14 +111,8 @@ export default function HomePageClient() {
       try {
         const params = new URLSearchParams();
         if (searchTerm) params.set("search", searchTerm);
-
-        // sort theo tab:
-        // tab 0 = latest, tab 1 = most_commented
-        if (selectedTab === 1) {
-          params.set("sort", "most_commented");
-        } else {
-          params.set("sort", "latest");
-        }
+        if (selectedTab === 1) params.set("sort", "most_commented");
+        else params.set("sort", "latest");
 
         const qs = params.toString();
         const url = qs ? `/api/reports?${qs}` : "/api/reports";
@@ -119,27 +135,26 @@ export default function HomePageClient() {
     };
   }, [searchTerm, selectedTab]);
 
-
   const itemsPerPage = 3;
   const totalPages = Math.max(1, Math.ceil(cars.length / itemsPerPage));
   const pagedCars = cars.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
-  const toggleLike = (name: string) => {
+  const toggleLikeInternal = (name: string) => {
     setLiked((prev) => ({ ...prev, [name]: !prev[name] }));
   };
 
-  const toggleCommentPanel = (name: string) => {
+  const toggleCommentPanelInternal = (name: string) => {
     setOpenComments((prev) => ({ ...prev, [name]: !prev[name] }));
   };
 
-  const handleSubmitComment = (name: string, text: string, files: File[]) => {
+  const handleSubmitCommentInternal = (name: string, text: string, files: File[]) => {
     const newMedia = files.map((f) => ({
       url: URL.createObjectURL(f),
       type: (f.type.startsWith("image/")
         ? "image"
         : f.type.startsWith("video/")
-          ? "video"
-          : "other") as "image" | "video" | "other",
+        ? "video"
+        : "other") as "image" | "video" | "other",
       name: f.name,
     }));
 
@@ -166,62 +181,73 @@ export default function HomePageClient() {
   };
 
   const handleOpenArticleDialog = () => {
-    setOpenArticleDialog(true);
+    ensureLoggedIn(() => setOpenArticleDialog(true));
   };
 
   const handleLoginClick = () => {
-    if (user) setUser(null);
-    else setUser({ name: "Long", avatarUrl: "" });
+    if (user) {
+      setUser(null);
+      return;
+    }
+    setOpenAuth(true);
   };
 
   const handlePublishArticle = async (payload: PublishPayload) => {
-    try {
-      const imageFile = payload.media.find((m) => m.kind === "image")?.file || null;
-      const videoFile = payload.media.find((m) => m.kind === "video")?.file || null;
+    await ensureLoggedIn(async () => {
+      try {
+        const imageFile = payload.media.find((m) => m.kind === "image")?.file || null;
+        const videoFile = payload.media.find((m) => m.kind === "video")?.file || null;
 
-      let imageUrl: string | undefined;
-      let videoUrl: string | undefined;
+        let imageUrl: string | undefined;
+        let videoUrl: string | undefined;
 
-      if (imageFile || videoFile) {
-        const formData = new FormData();
-        if (imageFile) formData.append("image", imageFile);
-        if (videoFile) formData.append("video", videoFile);
+        if (imageFile || videoFile) {
+          const formData = new FormData();
+          if (imageFile) formData.append("image", imageFile);
+          if (videoFile) formData.append("video", videoFile);
 
-        const uploadRes = await fetch("/api/upload", {
+          const uploadRes = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
+          if (!uploadRes.ok) return;
+
+          const uploadJson = await uploadRes.json();
+          imageUrl = uploadJson.imageUrl;
+          videoUrl = uploadJson.videoUrl;
+        }
+
+        const mediaPayload: { kind: "image" | "video"; url: string }[] = [];
+        if (imageUrl) mediaPayload.push({ kind: "image", url: imageUrl });
+        if (videoUrl) mediaPayload.push({ kind: "video", url: videoUrl });
+
+        const res = await fetch("/api/reports", {
           method: "POST",
-          body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: payload.title,
+            body: payload.body,
+            tags: payload.tags,
+            authorId: 1,
+            media: mediaPayload,
+          }),
         });
-        if (!uploadRes.ok) return;
+        if (!res.ok) return;
 
-        const uploadJson = await uploadRes.json();
-        imageUrl = uploadJson.imageUrl;
-        videoUrl = uploadJson.videoUrl;
+        const created = await res.json();
+        const mapped = mapReportToCarUiItem(created);
+        setCars((prev) => [mapped, ...prev]);
+        setPage(1);
+      } catch (e) {
+        console.error(e);
       }
+    });
+  };
 
-      const mediaPayload: { kind: "image" | "video"; url: string }[] = [];
-      if (imageUrl) mediaPayload.push({ kind: "image", url: imageUrl });
-      if (videoUrl) mediaPayload.push({ kind: "video", url: videoUrl });
-
-      const res = await fetch("/api/reports", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: payload.title,
-          body: payload.body,
-          tags: payload.tags,
-          authorId: 1,
-          media: mediaPayload,
-        }),
-      });
-      if (!res.ok) return;
-
-      const created = await res.json();
-      const mapped = mapReportToCarUiItem(created);
-      setCars((prev) => [mapped, ...prev]);
-      setPage(1);
-    } catch (e) {
-      console.error(e);
-    }
+  const handleShare = (carName: string) => {
+    ensureLoggedIn(() => {
+      console.log("share", carName);
+    });
   };
 
   return (
@@ -275,7 +301,14 @@ export default function HomePageClient() {
         <Tab label="Nhiều Report" />
       </Tabs>
 
-      <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+      <div
+        style={{
+          marginTop: 16,
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+        }}
+      >
         {pagedCars.map((car, i) => {
           const isLiked = !!liked[car.name];
           const likeDisplay = (car.likeCount || 0) + (isLiked ? 1 : 0);
@@ -293,11 +326,18 @@ export default function HomePageClient() {
               commentDisplay={commentDisplay}
               comments={carComments}
               openComments={isOpen}
-              toggleLike={() => toggleLike(car.name)}
-              toggleCommentPanel={() => toggleCommentPanel(car.name)}
-              handleSubmitComment={(text, files) =>
-                handleSubmitComment(car.name, text, files)
+              toggleLike={() =>
+                ensureLoggedIn(() => toggleLikeInternal(car.name))
               }
+              toggleCommentPanel={() =>
+                ensureLoggedIn(() => toggleCommentPanelInternal(car.name))
+              }
+              handleSubmitComment={(text, files) =>
+                ensureLoggedIn(() =>
+                  handleSubmitCommentInternal(car.name, text, files)
+                )
+              }
+              onShare={() => handleShare(car.name)}
             />
           );
         })}
@@ -316,6 +356,17 @@ export default function HomePageClient() {
         open={openArticleDialog}
         onClose={() => setOpenArticleDialog(false)}
         onPublish={handlePublishArticle}
+      />
+
+      <AuthDialog
+        open={openAuth}
+        onClose={() => setOpenAuth(false)}
+        onAuthSuccess={({ user: u }) => {
+          setUser({
+            name: u.displayName || u.email || "User",
+            avatarUrl: u.avatarUrl || "",
+          });
+        }}
       />
     </Container>
   );
