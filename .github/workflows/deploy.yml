@@ -20,23 +20,25 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
             APP_DIR=/home/ftpuser/ftp/upload/sucvatlaixe.com
+            NPM=/root/.nvm/versions/node/v22.21.1/bin/npm
+            PM2=/root/.nvm/versions/node/v22.21.1/bin/pm2
 
             cd "$APP_DIR"
 
-            # đồng bộ code main
+            # sync code
             git fetch origin main
             git reset --hard origin/main
 
-            # cài deps
+            # install deps
             if [ -f package-lock.json ]; then
-              npm ci
+              "$NPM" ci
             else
-              npm install
+              "$NPM" install
             fi
 
             # build nextjs
-            npm run build
+            "$NPM" run build
 
             # restart pm2 app
-            pm2 restart svlx || pm2 start npm --name svlx -- start
+            "$PM2" restart svlx || "$PM2" start "$NPM" --name svlx -- start
           '
