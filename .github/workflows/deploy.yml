@@ -19,26 +19,24 @@ jobs:
       - name: Deploy to VPS
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
+            # load nvm + node
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
             APP_DIR=/home/ftpuser/ftp/upload/sucvatlaixe.com
-            NPM=/root/.nvm/versions/node/v22.21.1/bin/npm
-            PM2=/root/.nvm/versions/node/v22.21.1/bin/pm2
 
             cd "$APP_DIR"
 
-            # sync code
             git fetch origin main
             git reset --hard origin/main
 
-            # install deps
             if [ -f package-lock.json ]; then
-              "$NPM" ci
+              npm ci
             else
-              "$NPM" install
+              npm install
             fi
 
-            # build nextjs
-            "$NPM" run build
+            npm run build
 
-            # restart pm2 app
-            "$PM2" restart svlx || "$PM2" start "$NPM" --name svlx -- start
+            pm2 restart svlx || pm2 start npm --name svlx -- start
           '
