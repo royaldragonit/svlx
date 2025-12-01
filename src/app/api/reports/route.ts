@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { verifyToken } from "@/lib/auth";
 
 function serializeBigInt<T>(data: T): T {
   return JSON.parse(
@@ -12,7 +13,55 @@ function serializeBigInt<T>(data: T): T {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search")?.trim() || "";
-  const sort = searchParams.get("sort")?.trim() || "latest"; // "latest" | "most_commented"
+  const sort = searchParams.get("sort")?.trim() || "latest";
+  const reportIdParam = searchParams.get("report_id");
+
+  // lấy userId nếu có
+  const token = req.cookies.get("auth_token")?.value;
+  const payload = token ? verifyToken(token) : null;
+  const currentUserId = payload ? BigInt(payload.userId) : null;
+
+  // nếu có report_id -> chỉ lấy 1
+  if (reportIdParam) {
+    try {
+      const id = BigInt(reportIdParam);
+
+      const report = await db.carReport.findUnique({
+        where: { id },
+        include: {
+          author: true,
+          media: true,
+          _count: {
+            select: { comments: true },
+          },
+        },
+      });
+
+      let result: any[] = [];
+      if (report) {
+        let likedByCurrentUser = false;
+
+        if (currentUserId) {
+          const like = await db.userLike.findUnique({
+            where: {
+              userId_targetType_targetId: {
+                userId: currentUserId,
+                targetType: "report",
+                targetId: report.id,
+              },
+            },
+          });
+          likedByCurrentUser = !!like;
+        }
+
+        result = [{ ...report, likedByCurrentUser }];
+      }
+
+      return NextResponse.json(serializeBigInt(result));
+    } catch {
+      return NextResponse.json(serializeBigInt([]));
+    }
+  }
 
   const where: any = {};
 
@@ -26,7 +75,6 @@ export async function GET(req: NextRequest) {
   }
 
   const orderBy: any[] = [];
-
   if (sort === "most_commented") {
     orderBy.push({ comments: { _count: "desc" } });
     orderBy.push({ createdAt: "desc" });
@@ -47,41 +95,29 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return NextResponse.json(serializeBigInt(reports));
-}
+  let result: any[] = reports;
 
-export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const media = Array.isArray(body.media) ? body.media : [];
-  const mainImage =
-    media.find((m: any) => m.kind === "image")?.url ?? body.mainImageUrl ?? null;
+  if (currentUserId && reports.length > 0) {
+    const ids = reports.map((r) => r.id);
 
-  const report = await db.carReport.create({
-    data: {
-      authorId: body.authorId ?? 1,
-      plateNumber: body.plateNumber ?? "UNKNOWN",
-      title: body.title,
-      description: body.body,
-      carType: body.carType ?? "",
-      location: body.location ?? "",
-      mainImageUrl: mainImage,
-      // categoryTag bỏ ý nghĩa, có thể để null luôn:
-      categoryTag: null,
-      media: {
-        create: media.map((m: any) => ({
-          mediaType: m.kind,
-          url: m.url,
-        })),
+    const likes = await db.userLike.findMany({
+      where: {
+        userId: currentUserId,
+        targetType: "report",
+        targetId: { in: ids },
       },
-    },
-    include: {
-      author: true,
-      media: true,
-      _count: {
-        select: { comments: true },
+      select: {
+        targetId: true,
       },
-    },
-  });
+    });
 
-  return NextResponse.json(serializeBigInt(report), { status: 201 });
+    const likedSet = new Set(likes.map((l) => l.targetId.toString()));
+
+    result = reports.map((r) => ({
+      ...r,
+      likedByCurrentUser: likedSet.has(r.id.toString()),
+    }));
+  }
+
+  return NextResponse.json(serializeBigInt(result));
 }

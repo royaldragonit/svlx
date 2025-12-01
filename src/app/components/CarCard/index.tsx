@@ -155,6 +155,7 @@ export default function CarCard({
                   {liked ? <FavoriteIcon color="error" /> : <FavoriteBorderIcon />}
                 </IconButton>
               </Tooltip>
+
               <Tooltip title="Bình luận">
                 <IconButton onClick={toggleCommentPanel}>
                   <ChatBubbleOutlineIcon />

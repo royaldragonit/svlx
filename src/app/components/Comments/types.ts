@@ -11,7 +11,7 @@ export type CommentItem = {
   media: CommentMedia[];
   createdAt: number;
   authorName: string;
-  authorRank: "Bạc" | "Vàng" | "Kim Cương";
+  authorRank: string;
 };
 
 
