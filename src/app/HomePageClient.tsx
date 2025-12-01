@@ -76,9 +76,9 @@ function mapReportToCarUiItem(r: any): CarUiItem {
     createdAt: r.createdAt,
     media: Array.isArray(r.media)
       ? r.media.map((m: any) => ({
-          mediaType: m.mediaType as "image" | "video" | "other",
-          url: m.url as string,
-        }))
+        mediaType: m.mediaType as "image" | "video" | "other",
+        url: m.url as string,
+      }))
       : [],
   };
 }
@@ -95,7 +95,7 @@ export default function HomePageClient() {
   const [cars, setCars] = useState<CarUiItem[]>([]);
   const [user, setUser] = useState<{ name: string; avatarUrl?: string } | null>(null);
   const [openAuth, setOpenAuth] = useState(false);
-
+  const [activeMenu, setActiveMenu] = useState<"home" | "qa" | "chat">("home");
   const ensureLoggedIn = (action: () => void) => {
     if (!user) {
       setOpenAuth(true);
@@ -153,8 +153,8 @@ export default function HomePageClient() {
       type: (f.type.startsWith("image/")
         ? "image"
         : f.type.startsWith("video/")
-        ? "video"
-        : "other") as "image" | "video" | "other",
+          ? "video"
+          : "other") as "image" | "video" | "other",
       name: f.name,
     }));
 
@@ -273,7 +273,40 @@ export default function HomePageClient() {
           )}
         </Toolbar>
       </AppBar>
-
+      <Box
+        sx={{
+          mt: 1,
+          mb: 1,
+          display: "flex",
+          justifyContent: "center",
+          gap: 2,
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          pb: 1,
+        }}
+      >
+        <Button
+          variant={activeMenu === "home" ? "contained" : "text"}
+          size="small"
+          onClick={() => setActiveMenu("home")}
+        >
+          Trang chủ
+        </Button>
+        <Button
+          variant={activeMenu === "qa" ? "contained" : "text"}
+          size="small"
+          onClick={() => setActiveMenu("qa")}
+        >
+          Hỏi đáp
+        </Button>
+        <Button
+          variant={activeMenu === "chat" ? "contained" : "text"}
+          size="small"
+          onClick={() => setActiveMenu("chat")}
+        >
+          Chatbox
+        </Button>
+      </Box>
       <TextField
         fullWidth
         sx={{ mt: 2, mb: 2 }}

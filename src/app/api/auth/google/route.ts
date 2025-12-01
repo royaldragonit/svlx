@@ -9,7 +9,7 @@ export async function GET(_req: NextRequest) {
     "email",
     "profile",
   ].join(" ");
-
+  console.log(" process.env.GOOGLE_OAUTH_REDIRECT_URI", process.env.GOOGLE_OAUTH_REDIRECT_URI)
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
