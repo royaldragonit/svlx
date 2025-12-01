@@ -10,6 +10,24 @@ function serializeBigInt<T>(data: T): T {
   );
 }
 
+// ================== POINTS + RANK ==================
+
+function calcCommentPoint(hasMedia: boolean, content: string): number {
+  const text = content.trim();
+
+  if (!hasMedia && text.length < 3) return 0; // chống spam rác
+  if (hasMedia) return 5;
+  if (text.length >= 10) return 2;
+  return 1;
+}
+
+function getRank(points: number): string {
+  if (points >= 700) return "Kim cương";
+  if (points >= 300) return "Bạch kim";
+  if (points >= 100) return "Vàng";
+  return "Bạc";
+}
+
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
@@ -37,24 +55,46 @@ export async function POST(req: NextRequest, context: RouteContext) {
       );
     }
 
-    // ✅ lấy id từ params (phải await)
     const { id } = await context.params;
     const reportId = BigInt(id);
     const userId = BigInt(payload.userId);
+    const hasMedia = media.length > 0;
+    const commentPoints = calcCommentPoint(hasMedia, content);
 
-    const created = await db.comment.create({
-      data: {
-        reportId,
-        authorId: userId,
-        content,
-        media: {
-          create: media.map((m: any) => ({
-            mediaType: m.kind,
-            url: m.url,
-            fileName: m.fileName ?? null,
-          })),
+    const created = await db.$transaction(async (tx) => {
+      const comment = await tx.comment.create({
+        data: {
+          reportId,
+          authorId: userId,
+          content,
+          media: {
+            create: media.map((m: any) => ({
+              mediaType: m.kind,
+              url: m.url,
+              fileName: m.fileName ?? null,
+            })),
+          },
         },
-      },
+      });
+
+      if (commentPoints > 0) {
+        const userAfterPoint = await tx.user.update({
+          where: { id: userId },
+          data: {
+            points: { increment: commentPoints },
+          },
+          select: { points: true },
+        });
+
+        const newRank = getRank(userAfterPoint.points);
+
+        await tx.user.update({
+          where: { id: userId },
+          data: { rank: newRank },
+        });
+      }
+
+      return comment;
     });
 
     return NextResponse.json(serializeBigInt({ comment: created }), {
@@ -68,6 +108,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     );
   }
 }
+
 export async function GET(req: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
@@ -85,6 +126,9 @@ export async function GET(req: NextRequest, context: RouteContext) {
     return NextResponse.json(serializeBigInt(list));
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
