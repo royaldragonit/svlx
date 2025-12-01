@@ -11,6 +11,7 @@ export type CurrentUser = {
   points: number;
   joinedAt: string;
   postCount: number;
+  role?: string;
 };
 
 export function useCurrentUser() {

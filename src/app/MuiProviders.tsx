@@ -207,9 +207,17 @@ export default function MuiProviders({ children }: { children: React.ReactNode }
                   </Menu>
                 </>
               ) : (
-                <Button color="inherit" component={Link} href="/login" disabled={loading}>
+                <Button
+                  color="inherit"
+                  disabled={loading}
+                  onClick={() => {
+                    // bật AuthDialog thông qua event custom từ layout
+                    window.dispatchEvent(new CustomEvent("open-auth-dialog"));
+                  }}
+                >
                   Đăng nhập
                 </Button>
+
               )}
             </Toolbar>
           </AppBar>

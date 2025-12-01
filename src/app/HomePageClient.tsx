@@ -166,6 +166,11 @@ export default function HomePageClient() {
       controller.abort();
     };
   }, [searchTerm, selectedTab, reportIdFromUrl]);
+  useEffect(() => {
+    const open = () => setOpenAuth(true);
+    window.addEventListener("open-auth-dialog", open);
+    return () => window.removeEventListener("open-auth-dialog", open);
+  }, []);
 
   const itemsPerPage = 3;
   const totalPages = Math.max(1, Math.ceil(cars.length / itemsPerPage));
@@ -476,6 +481,7 @@ export default function HomePageClient() {
             points: u.points,
             joinedAt: u.joinedAt,
             postCount: u.postCount,
+            role: u.role
           })
         }
       />
