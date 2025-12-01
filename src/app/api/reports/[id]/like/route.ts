@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyToken } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 
 export async function POST(
   req: NextRequest,
@@ -17,11 +18,11 @@ export async function POST(
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    const { id } = await context.params; // <-- phải await
+    const { id } = await context.params; 
     const reportId = BigInt(id);
     const userId = BigInt(payload.userId);
 
-    const result = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const existing = await tx.userLike.findUnique({
         where: {
           userId_targetType_targetId: {
