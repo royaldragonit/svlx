@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
       points: true,
       joinedAt: true,
       postCount: true,
+      role: true
     },
   });
 

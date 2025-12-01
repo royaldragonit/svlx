@@ -10,6 +10,7 @@ export type ChatMessage = {
   text: string;
   imageData?: string | null;
   createdAt: string;
+  role: string;
 };
 
 export type OnlineUser = {

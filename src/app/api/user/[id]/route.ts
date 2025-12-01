@@ -23,6 +23,7 @@ export async function GET(_req: Request, ctx: any) {
       points: true,
       postCount: true,
       joinedAt: true,
+      role: true
     },
   });
 

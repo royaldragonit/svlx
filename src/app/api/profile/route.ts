@@ -75,6 +75,7 @@ export async function PUT(req: NextRequest) {
         displayName: true,
         avatarUrl: true,
         rank: true,
+        role: true
       },
     });
 

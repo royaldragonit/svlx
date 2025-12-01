@@ -9,6 +9,7 @@ type ChatUser = {
   points: number;
   joinedAt: string;
   posts: number;
+  role?: string;
 };
 
 type ChatMessage = {
@@ -23,6 +24,7 @@ type ChatMessage = {
   points?: number;
   joinedAt?: string;
   posts?: number;
+  role?: string;
 };
 
 type NextApiResponseWithIO = NextApiResponse & {
@@ -95,6 +97,7 @@ export default function handler(_req: NextApiRequest, res: NextApiResponseWithIO
           points: info?.points ?? 0,
           joinedAt: info?.joinedAt ?? "",
           posts: info?.posts ?? 0,
+          role: info?.role
         };
 
         MESSAGES.push(msg);

@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
       displayName: name,
       avatarUrl: picture || undefined,
       rank: "Bạc",
+      role: "Member"
     },
   });
 

@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
       avatarUrl: user.avatarUrl,
       rank: user.rank,
       createdAt: user.createdAt,
+      role: user.role
     });
 
     return NextResponse.json({ token, user: safeUser }, { status: 200 });
