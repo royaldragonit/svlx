@@ -58,7 +58,7 @@ export function ChatMessageItem({ message: m, isMe, currentUserAvatar }: Props) 
               variant="subtitle2"
               sx={{
                 fontWeight: 600,
-                color: "#1976d2",
+                color: "#838181ff",
                 textDecoration: "none",
                 "&:hover": { textDecoration: "underline" },
               }}
