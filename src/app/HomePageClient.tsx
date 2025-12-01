@@ -305,6 +305,9 @@ export default function HomePageClient() {
         displayName: json.user.displayName,
         avatarUrl: json.user.avatarUrl || "",
         rank: json.user.rank || "Bạc",
+        points: json.user.points,
+        joinedAt: json.user.joinedAt,
+        postCount: json.user.postCount,
       });
 
       setProfileOpen(false);
@@ -710,11 +713,15 @@ export default function HomePageClient() {
           setUser({
             id: u.id,
             email: u.email,
-            displayName: u.displayName || u.email || "User",
-            avatarUrl: u.avatarUrl || "",
-            rank: u.rank || "Bạc",
+            displayName: u.displayName,
+            avatarUrl: u.avatarUrl,
+            rank: u.rank,
+            points: u.points,
+            joinedAt: u.joinedAt,
+            postCount: u.postCount,
           });
         }}
+
       />
 
       {/* Profile dialog */}

@@ -29,6 +29,9 @@ export async function GET(req: NextRequest) {
       displayName: true,
       avatarUrl: true,
       rank: true,
+      points: true,
+      joinedAt: true,
+      postCount: true,
     },
   });
 
@@ -36,6 +39,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  // quan trọng: serialize trước khi json
   return NextResponse.json(serializeBigInt({ user }));
 }
