@@ -10,18 +10,18 @@ function serializeBigInt<T>(data: T): T {
   );
 }
 
+// ================== GET LIST / DETAIL ==================
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search")?.trim() || "";
   const sort = searchParams.get("sort")?.trim() || "latest";
   const reportIdParam = searchParams.get("report_id");
 
-  // lấy userId nếu có
   const token = req.cookies.get("auth_token")?.value;
   const payload = token ? verifyToken(token) : null;
   const currentUserId = payload ? BigInt(payload.userId) : null;
 
-  // nếu có report_id -> chỉ lấy 1
+  // detail 1 report theo report_id
   if (reportIdParam) {
     try {
       const id = BigInt(reportIdParam);
@@ -63,6 +63,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // list
   const where: any = {};
 
   if (search) {
@@ -120,4 +121,90 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json(serializeBigInt(result));
+}
+
+// ================== POST TẠO CAR REPORT ==================
+type CreateReportBody = {
+  title: string;
+  body: string;
+  tags?: string;
+  plateNumber?: string;
+  carType?: string;
+  location?: string;
+  media?: {
+    kind: "image" | "video";
+    url: string;
+    fileName?: string;
+  }[];
+};
+
+export async function POST(req: NextRequest) {
+  try {
+    // check auth
+    const token = req.cookies.get("auth_token")?.value;
+    if (!token) {
+      return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
+    }
+
+    const payload = verifyToken(token);
+    if (!payload) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
+    const bodyJson = (await req.json()) as CreateReportBody;
+
+    const title = (bodyJson.title || "").trim();
+    const description = (bodyJson.body || "").trim();
+    const tags = (bodyJson.tags || "").trim();
+    const plateNumber = (bodyJson.plateNumber || "").trim();
+    const carType = (bodyJson.carType || "").trim();
+    const location = (bodyJson.location || "").trim();
+    const media = Array.isArray(bodyJson.media) ? bodyJson.media : [];
+
+    if (!title && !description) {
+      return NextResponse.json(
+        { error: "Tiêu đề hoặc nội dung không được trống" },
+        { status: 400 }
+      );
+    }
+
+    const firstImage = media.find((m) => m.kind === "image");
+    const authorId = BigInt(payload.userId);
+
+    const created = await db.carReport.create({
+      data: {
+        plateNumber: plateNumber || "",          // tạm thời cho phép rỗng
+        title,
+        description,
+        carType: carType || "",
+        location: location || "",
+        categoryTag: tags || null,
+        mainImageUrl: firstImage?.url || null,
+        authorId,
+        likeCount: 0,
+        shareCount: 0,
+        media: {
+          create: media.map((m) => ({
+            mediaType: m.kind,
+            url: m.url,
+            fileName: m.fileName ?? null,
+          })),
+        },
+      },
+      include: {
+        author: true,
+        media: true,
+        _count: { select: { comments: true } },
+      },
+    });
+
+    // trả về cùng format với GET (để mapReportToCarUiItem dùng được)
+    return NextResponse.json(serializeBigInt(created), { status: 201 });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
 }

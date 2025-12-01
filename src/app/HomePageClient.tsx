@@ -1,37 +1,38 @@
+// ĐÃ RÚT GỌN VÌ HEADER + MENU ĐƯỢC ĐẨY LÊN MuiProviders
+
 "use client";
 
 import {
   Container,
-  AppBar,
-  Toolbar,
-  Typography,
-  Button,
   TextField,
   Tabs,
   Tab,
   Pagination,
-  Avatar,
   Box,
-  Menu,
-  MenuItem,
-  Divider,
+  Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  Typography,
+  Avatar,
   IconButton,
+  Menu,
+  MenuItem,
+  Divider,
   InputAdornment,
 } from "@mui/material";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { CommentItem } from "./components/Comments/types";
 import CarCard from "./components/CarCard";
 import ApplyArticleDialog from "./Dialogs/ApplyArticleDialog";
-import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import AuthDialog from "./Dialogs/AuthDialog";
-import Link from "next/link";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { useSearchParams } from "next/navigation";
 
 type MediaUiItem = {
@@ -57,8 +58,7 @@ type CarUiItem = {
   media: MediaUiItem[];
   likedByCurrentUser?: boolean;
 };
-
-type PublishPayload = {
+export type PublishPayload = {
   title: string;
   body: string;
   tags: string;
@@ -66,82 +66,42 @@ type PublishPayload = {
   time: string;
   meridiem: "AM" | "PM";
   scheduled: boolean;
-  media: { kind: "image" | "video"; url: string; file?: File | null }[];
+  media: {
+    kind: "image" | "video";
+    url: string;
+    file?: File | null;
+  }[];
 };
-
-function mapReportToCarUiItem(r: any): CarUiItem {
-  return {
-    id: r.id,
-    name: `${r.plateNumber} - ${r.title}`,
-    plateNumber: r.plateNumber,
-    description: r.description,
-    type: r.carType ?? "",
-    location: r.location ?? "",
-    reportCategory: r.categoryTag ?? "Mới Cập Nhật",
-    likeCount: r.likeCount ?? 0,
-    commentCount: r._count?.comments ?? 0,
-    shareCount: r.shareCount ?? 0,
-    image:
-      r.mainImageUrl ??
-      r.media?.find((m: any) => m.mediaType === "image")?.url ??
-      "/cars/car-placeholder.png",
-    authorName: r.author?.displayName ?? "Ẩn danh",
-    authorRank: r.author?.rank ?? "Bạc",
-    createdAt: r.createdAt,
-    media: Array.isArray(r.media)
-      ? r.media.map((m: any) => ({
-        mediaType: m.mediaType as "image" | "video" | "other",
-        url: m.url as string,
-      }))
-      : [],
-    likedByCurrentUser: r.likedByCurrentUser ?? false,
-  };
-}
 
 export default function HomePageClient() {
   const { user, loading, setUser } = useCurrentUser();
+
   const searchParams = useSearchParams();
   const reportIdFromUrl = searchParams?.get("report_id");
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTab, setSelectedTab] = useState(0);
   const [page, setPage] = useState(1);
   const [openArticleDialog, setOpenArticleDialog] = useState(false);
+  const [cars, setCars] = useState<CarUiItem[]>([]);
+  const [openAuth, setOpenAuth] = useState(false);
 
   const [liked, setLiked] = useState<Record<number, boolean>>({});
   const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
-  const [commentAdds, setCommentAdds] = useState<Record<number, number>>({});
   const [comments, setComments] = useState<Record<number, CommentItem[]>>({});
-  const [cars, setCars] = useState<CarUiItem[]>([]);
-
-  const [openAuth, setOpenAuth] = useState(false);
-  const [activeMenu, setActiveMenu] = useState<"home" | "qa" | "chat">("home");
-
-  // profile dialog
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [profileSaving, setProfileSaving] = useState(false);
-  const [profileName, setProfileName] = useState("");
-  const [profileAvatar, setProfileAvatar] = useState("");
-  const [profileNewPassword, setProfileNewPassword] = useState("");
-  const [profileConfirmPassword, setProfileConfirmPassword] = useState("");
-  const [profileError, setProfileError] = useState<string | null>(null);
-
-  // share dialog
+  const [commentAdds, setCommentAdds] = useState<Record<number, number>>({});
   const [shareOpen, setShareOpen] = useState(false);
   const [shareLink, setShareLink] = useState("");
-  const [copied, setCopied] = useState(false);
 
-  // menu avatar
-  const [avatarAnchorEl, setAvatarAnchorEl] = useState<null | HTMLElement>(null);
-  const avatarMenuOpen = Boolean(avatarAnchorEl);
-
-  const ensureLoggedIn = (action: () => void) => {
+  const ensureLoggedIn = (fn: () => void) => {
     if (!user) {
       setOpenAuth(true);
       return;
     }
-    action();
+    fn();
   };
 
+  // fetch reports
   useEffect(() => {
     const controller = new AbortController();
 
@@ -150,10 +110,8 @@ export default function HomePageClient() {
         const params = new URLSearchParams();
 
         if (reportIdFromUrl) {
-          // nếu có report_id -> chỉ lấy 1 report
           params.set("report_id", reportIdFromUrl);
         } else {
-          // logic cũ: search + sort
           if (searchTerm) params.set("search", searchTerm);
           if (selectedTab === 1) params.set("sort", "most_commented");
           else params.set("sort", "latest");
@@ -164,20 +122,44 @@ export default function HomePageClient() {
 
         const res = await fetch(url, { signal: controller.signal });
         if (!res.ok) return;
+
         const data = await res.json();
-        const mapped: CarUiItem[] = data.map(mapReportToCarUiItem);
+
+        const mapped = data.map((r: any) => ({
+          id: r.id,
+          name: `${r.plateNumber} - ${r.title}`,
+          plateNumber: r.plateNumber,
+          description: r.description,
+          type: r.carType ?? "",
+          location: r.location ?? "",
+          reportCategory: r.categoryTag ?? "Mới cập nhật",
+          likeCount: r.likeCount ?? 0,
+          commentCount: r._count?.comments ?? 0,
+          shareCount: r.shareCount ?? 0,
+          image:
+            r.mainImageUrl ||
+            r.media?.find((m: any) => m.mediaType === "image")?.url ||
+            "/cars/car-placeholder.png",
+          authorName: r.author?.displayName ?? "Ẩn danh",
+          authorRank: r.author?.rank ?? "Bạc",
+          createdAt: r.createdAt,
+          media: Array.isArray(r.media)
+            ? r.media.map((m: any) => ({
+              mediaType: m.mediaType,
+              url: m.url,
+            }))
+            : [],
+          likedByCurrentUser: r.likedByCurrentUser ?? false,
+        }));
+
         const likedMap: Record<number, boolean> = {};
-        mapped.forEach((c) => {
-          likedMap[c.id] = !!c.likedByCurrentUser;
-        });
-        setLiked(likedMap);
+        mapped.forEach((c: any) => (likedMap[c.id] = !!c.likedByCurrentUser));
+
         setCars(mapped);
+        setLiked(likedMap);
         setPage(1);
-      } catch (e: any) {
-        if (e?.name === "AbortError") return;
-        console.error(e);
-      }
-    }, 500);
+      } catch { }
+    }, 400);
 
     return () => {
       clearTimeout(timeout);
@@ -189,265 +171,41 @@ export default function HomePageClient() {
   const totalPages = Math.max(1, Math.ceil(cars.length / itemsPerPage));
   const pagedCars = cars.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
-  // like -> call API
-  const toggleLikeInternal = async (car: CarUiItem) => {
-    if (!user) return;
+  const toggleLike = async (car: CarUiItem) => {
+    ensureLoggedIn(async () => {
+      const prev = liked[car.id];
 
-    const key = car.id;
-    const prevLiked = !!liked[key];
+      setLiked((p) => ({ ...p, [car.id]: !prev }));
 
-    // optimistic toggle
-    setLiked((prev) => ({ ...prev, [key]: !prevLiked }));
-
-    try {
-      const res = await fetch(`/api/reports/${car.id}/like`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error("like failed");
-      const json = await res.json() as { liked: boolean; likeCount: number };
-
-      setLiked((prev) => ({ ...prev, [key]: json.liked }));
-      setCars((prev) =>
-        prev.map((c) =>
-          c.id === car.id ? { ...c, likeCount: json.likeCount } : c
-        )
-      );
-    } catch (e) {
-      console.error(e);
-      // rollback
-      setLiked((prev) => ({ ...prev, [key]: prevLiked }));
-    }
-  };
-
-  function mapApiCommentToUi(c: any): CommentItem {
-    return {
-      id: String(c.id),
-      text: c.content,
-      media: Array.isArray(c.media)
-        ? c.media.map((m: any) => ({
-          url: m.url as string,
-          type: m.mediaType as "image" | "video" | "other",
-          name: m.fileName || "",
-        }))
-        : [],
-      createdAt: new Date(c.createdAt).getTime(),
-      authorName: c.author?.displayName || c.author?.email || "Người dùng",
-      authorRank: c.author?.rank || "Bạc",
-    };
-  }
-
-  const toggleCommentPanelInternal = async (car: CarUiItem) => {
-    const carId = car.id;
-
-    // lần đầu mở + chưa có data -> fetch
-    if (!openComments[carId] && !comments[carId]) {
       try {
-        const res = await fetch(`/api/reports/${carId}/comments`);
-        if (res.ok) {
-          const data = await res.json();
-          const mapped: CommentItem[] = data.map(mapApiCommentToUi);
-          setComments((prev) => ({ ...prev, [carId]: mapped }));
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    // toggle panel
-    setOpenComments((prev) => ({ ...prev, [carId]: !prev[carId] }));
-  };
-
-
-  const handleUpdateProfile = async () => {
-    if (!user) return;
-
-    setProfileError(null);
-
-    if (!profileName.trim()) {
-      setProfileError("Tên hiển thị không được để trống");
-      return;
-    }
-
-    if (profileNewPassword || profileConfirmPassword) {
-      if (profileNewPassword !== profileConfirmPassword) {
-        setProfileError("Mật khẩu nhập lại không khớp");
-        return;
-      }
-      if (profileNewPassword.length < 6) {
-        setProfileError("Mật khẩu phải >= 6 ký tự");
-        return;
-      }
-    }
-
-    setProfileSaving(true);
-    try {
-      const res = await fetch("/api/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          displayName: profileName.trim(),
-          avatarUrl: profileAvatar.trim() || null,
-          newPassword: profileNewPassword || "",
-          confirmPassword: profileConfirmPassword || "",
-        }),
-      });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        setProfileError(json?.error || "Cập nhật thất bại");
-        return;
-      }
-
-      setUser({
-        id: json.user.id,
-        email: json.user.email,
-        displayName: json.user.displayName,
-        avatarUrl: json.user.avatarUrl || "",
-        rank: json.user.rank || "Bạc",
-        points: json.user.points,
-        joinedAt: json.user.joinedAt,
-        postCount: json.user.postCount,
-      });
-
-      setProfileOpen(false);
-    } catch (e) {
-      console.error(e);
-      setProfileError("Có lỗi xảy ra, vui lòng thử lại");
-    } finally {
-      setProfileSaving(false);
-    }
-  };
-
-  // comment -> upload file (nếu có) + gọi API
-  const handleSubmitCommentInternal = async (
-    car: CarUiItem,
-    text: string,
-    files: File[]
-  ) => {
-    if (!user) return;
-
-    try {
-      let imageUrl: string | undefined;
-      let videoUrl: string | undefined;
-      const file = files[0];
-
-      if (file) {
-        const formData = new FormData();
-        if (file.type.startsWith("image/")) {
-          formData.append("image", file);
-        } else if (file.type.startsWith("video/")) {
-          formData.append("video", file);
-        }
-
-        const uploadRes = await fetch("/api/upload", {
+        const res = await fetch(`/api/reports/${car.id}/like`, {
           method: "POST",
-          body: formData,
         });
-        if (uploadRes.ok) {
-          const uploadJson = await uploadRes.json();
-          imageUrl = uploadJson.imageUrl;
-          videoUrl = uploadJson.videoUrl;
-        }
+        if (!res.ok) throw 0;
+        const json = await res.json();
+
+        setLiked((p) => ({ ...p, [car.id]: json.liked }));
+        setCars((prev) =>
+          prev.map((c) =>
+            c.id === car.id ? { ...c, likeCount: json.likeCount } : c
+          )
+        );
+      } catch {
+        setLiked((p) => ({ ...p, [car.id]: prev }));
       }
-
-      const mediaPayload: { kind: "image" | "video"; url: string; fileName?: string }[] = [];
-      if (imageUrl) {
-        mediaPayload.push({
-          kind: "image",
-          url: imageUrl,
-          fileName: file?.name,
-        });
-      }
-      if (videoUrl) {
-        mediaPayload.push({
-          kind: "video",
-          url: videoUrl,
-          fileName: file?.name,
-        });
-      }
-
-      const res = await fetch(`/api/reports/${car.id}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: text,
-          media: mediaPayload,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        console.error(json);
-        return;
-      }
-
-      const created = json.comment as {
-        id: number;
-        createdAt: string;
-      };
-
-      const newComment: CommentItem = {
-        id: String(created.id),
-        text,
-        media: mediaPayload.map((m) => ({
-          url: m.url,
-          type: m.kind,
-          name: m.fileName || "",
-        })),
-        createdAt: new Date(created.createdAt).getTime(),
-        authorName: user.displayName || user.email || "Người dùng",
-        authorRank: user.rank || "Bạc",
-      };
-
-      setComments((prev) => ({
-        ...prev,
-        [car.id]: [...(prev[car.id] || []), newComment],
-      }));
-
-      setCommentAdds((prev) => ({
-        ...prev,
-        [car.id]: (prev[car.id] || 0) + 1,
-      }));
-
-      setOpenComments((prev) => ({ ...prev, [car.id]: true }));
-    } catch (e) {
-      console.error(e);
-    }
+    });
   };
-
-  const handleOpenArticleDialog = () => {
-    ensureLoggedIn(() => setOpenArticleDialog(true));
+  const handleShare = (car: CarUiItem) => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const link = `${origin}/?report_id=${car.id}`;
+    setShareLink(link);
+    setShareOpen(true);
   };
-
-  const handleLoginClick = () => {
-    if (user) return;
-    setOpenAuth(true);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setUser(null);
-      setAvatarAnchorEl(null);
-    }
-  };
-
-  const handleAvatarClick = (e: React.MouseEvent<HTMLElement>) => {
-    setAvatarAnchorEl(e.currentTarget);
-  };
-
-  const handleAvatarMenuClose = () => {
-    setAvatarAnchorEl(null);
-  };
-
   const handlePublishArticle = async (payload: PublishPayload) => {
     await ensureLoggedIn(async () => {
       try {
-        const imageFile = payload.media.find((m) => m.kind === "image")?.file || null;
-        const videoFile = payload.media.find((m) => m.kind === "video")?.file || null;
+        const imageFile = payload.media.find((m: { kind: string }) => m.kind === "image")?.file || null;
+        const videoFile = payload.media.find((m: { kind: string }) => m.kind === "video")?.file || null;
 
         let imageUrl: string | undefined;
         let videoUrl: string | undefined;
@@ -461,9 +219,8 @@ export default function HomePageClient() {
             method: "POST",
             body: formData,
           });
-          if (!uploadRes.ok) return;
 
-          const uploadJson = await uploadRes.json();
+          const uploadJson: { imageUrl?: string; videoUrl?: string } = await uploadRes.json();
           imageUrl = uploadJson.imageUrl;
           videoUrl = uploadJson.videoUrl;
         }
@@ -483,214 +240,212 @@ export default function HomePageClient() {
             media: mediaPayload,
           }),
         });
-        if (!res.ok) return;
 
-        const created = await res.json();
-        const mapped = mapReportToCarUiItem(created);
-        setCars((prev) => [mapped, ...prev]);
+        const created: any = await res.json(); // API chưa typed nên dùng any
+
+        setCars((prev) => [
+          {
+            id: created.id,
+            name: `${created.plateNumber} - ${created.title}`,
+            plateNumber: created.plateNumber,
+            description: created.description,
+            type: created.carType ?? "",
+            location: created.location ?? "",
+            reportCategory: created.categoryTag ?? "Mới cập nhật",
+            likeCount: created.likeCount ?? 0,
+            commentCount: created._count?.comments ?? 0,
+            shareCount: created.shareCount ?? 0,
+            image:
+              created.mainImageUrl ||
+              created.media?.find((m: any) => m.mediaType === "image")?.url ||
+              "/cars/car-placeholder.png",
+            authorName: created.author?.displayName ?? "Ẩn danh",
+            authorRank: created.author?.rank ?? "Bạc",
+            createdAt: created.createdAt,
+            media: created.media ?? [],
+          },
+          ...prev,
+        ]);
+
         setPage(1);
       } catch (e) {
         console.error(e);
       }
     });
   };
+  const handleSubmitCommentInternal = async (
+    car: CarUiItem,
+    text: string,
+    files: File[]
+  ) => {
+    if (!user) return;
 
-  // share
-  const handleShare = (car: CarUiItem) => {
-    const origin =
-      typeof window !== "undefined" ? window.location.origin : "";
-    const link = `${origin}/?report_id=${car.id}`;
-    setShareLink(link);
-    setShareOpen(true);
-  };
-
-  const handleCopyShare = async () => {
-    if (!shareLink) return;
     try {
-      await navigator.clipboard.writeText(shareLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch (e) {
-      console.error(e);
+      let imageUrl: string | undefined;
+      let videoUrl: string | undefined;
+      const file = files[0];
+
+      // upload media nếu có
+      if (file) {
+        const formData = new FormData();
+        if (file.type.startsWith("image/")) formData.append("image", file);
+        if (file.type.startsWith("video/")) formData.append("video", file);
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const uploadJson = await uploadRes.json();
+        imageUrl = uploadJson.imageUrl;
+        videoUrl = uploadJson.videoUrl;
+      }
+
+      const mediaPayload: { kind: "image" | "video"; url: string; fileName?: string }[] = [];
+      if (imageUrl)
+        mediaPayload.push({ kind: "image", url: imageUrl, fileName: file?.name });
+      if (videoUrl)
+        mediaPayload.push({ kind: "video", url: videoUrl, fileName: file?.name });
+
+      // gửi comment vào DB
+      const res = await fetch(`/api/reports/${car.id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: text,
+          media: mediaPayload,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        console.error(json);
+        return;
+      }
+
+      const created = json.comment; // trả về từ backend
+
+      const newComment: CommentItem = {
+        id: String(created.id),
+        text,
+        media: mediaPayload.map((m) => ({
+          url: m.url,
+          type: m.kind,
+          name: m.fileName || "",
+        })),
+        createdAt: new Date(created.createdAt).getTime(),
+        authorName: user.displayName || user.email || "User",
+        authorRank: user.rank || "Bạc",
+      };
+
+      // add vào list UI
+      setComments((prev) => ({
+        ...prev,
+        [car.id]: [...(prev[car.id] || []), newComment],
+      }));
+
+      setCommentAdds((prev) => ({
+        ...prev,
+        [car.id]: (prev[car.id] || 0) + 1,
+      }));
+
+      setOpenComments((prev) => ({ ...prev, [car.id]: true }));
+    } catch (err) {
+      console.error(err);
     }
   };
 
+  // open/close comment panel
+  const toggleCommentPanel = async (car: CarUiItem) => {
+    const id = car.id;
+
+    if (!openComments[id] && !comments[id]) {
+      try {
+        const res = await fetch(`/api/reports/${id}/comments`);
+        if (res.ok) {
+          const data = await res.json();
+          const mapped = data.map((c: any) => ({
+            id: String(c.id),
+            text: c.content,
+            media: (c.media || []).map((m: any) => ({
+              url: m.url,
+              type: m.mediaType,
+              name: m.fileName,
+            })),
+            createdAt: new Date(c.createdAt).getTime(),
+            authorName: c.author?.displayName || "User",
+            authorRank: c.author?.rank || "Bạc",
+          }));
+          setComments((p) => ({ ...p, [id]: mapped }));
+        }
+      } catch { }
+    }
+
+    setOpenComments((p) => ({ ...p, [id]: !p[id] }));
+  };
+
   return (
-    <Container>
-      <AppBar position="sticky" sx={{ backgroundColor: "#aac9e7ff" }}>
-        <Toolbar>
-          <Image src="/logo2.png" alt="Logo" width={100} height={40} />
-          <Typography variant="h6" sx={{ flexGrow: 1, ml: 1 }}>
-            Súc vật lái xe
-          </Typography>
-
-          {user ? (
-            <>
-              <Avatar
-                sx={{ width: 36, height: 36, cursor: "pointer" }}
-                src={user.avatarUrl || undefined}
-                onClick={handleAvatarClick}
-              >
-                {(user.displayName || user.email || "U").charAt(0).toUpperCase()}
-              </Avatar>
-
-              <Menu
-                anchorEl={avatarAnchorEl}
-                open={avatarMenuOpen}
-                onClose={handleAvatarMenuClose}
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                transformOrigin={{ vertical: "top", horizontal: "right" }}
-              >
-                <MenuItem
-                  onClick={() => {
-                    handleAvatarMenuClose();
-                    if (user) {
-                      setProfileName(user.displayName || "");
-                      setProfileAvatar(user.avatarUrl || "");
-                      setProfileNewPassword("");
-                      setProfileConfirmPassword("");
-                      setProfileError(null);
-                      setProfileOpen(true);
-                    }
-                  }}
-                >
-                  Hồ sơ
-                </MenuItem>
-                <MenuItem
-                  onClick={() => {
-                    handleAvatarMenuClose();
-                    if (user) {
-                      setProfileName(user.displayName || "");
-                      setProfileAvatar(user.avatarUrl || "");
-                      setProfileNewPassword("");
-                      setProfileConfirmPassword("");
-                      setProfileError(null);
-                      setProfileOpen(true);
-                    }
-                  }}
-                >
-                  Đổi mật khẩu
-                </MenuItem>
-
-                <Divider />
-                <MenuItem onClick={handleLogout}>Đăng xuất</MenuItem>
-              </Menu>
-            </>
-          ) : (
-            <Button color="inherit" onClick={handleLoginClick} disabled={loading}>
-              Đăng nhập
-            </Button>
-          )}
-        </Toolbar>
-      </AppBar>
-
-      <Box
-        sx={{
-          mt: 1,
-          mb: 1,
-          display: "flex",
-          justifyContent: "center",
-          gap: 2,
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          pb: 1,
-        }}
-      >
-        <Button
-          variant={activeMenu === "home" ? "contained" : "text"}
-          size="small"
-          onClick={() => setActiveMenu("home")}
-        >
-          Trang chủ
-        </Button>
-        <Button
-          variant={activeMenu === "qa" ? "contained" : "text"}
-          size="small"
-          onClick={() => setActiveMenu("qa")}
-        >
-          Hỏi đáp
-        </Button>
-        <Button
-          variant={activeMenu === "chat" ? "contained" : "text"}
-          size="small"
-          onClick={() => setActiveMenu("chat")}
-          component={Link}
-          href="/chat"
-        >
-          Chatbox
-        </Button>
-      </Box>
-
+    <Container sx={{ mt: 2 }}>
+      {/* SEARCH */}
       <TextField
         fullWidth
-        sx={{ mt: 2, mb: 2 }}
-        label="Tìm mấy con chó khôn lỏi theo biển số xe ví dụ: 51A12345"
+        sx={{ mt: 1, mb: 2 }}
+        label="Tìm theo biển số xe ví dụ: 51A12345"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
       />
 
+      {/* ADD BUTTON */}
       <Box sx={{ mb: 1, display: "flex", justifyContent: "flex-end" }}>
         <Button
           sx={{ backgroundColor: "#f8d718ff" }}
-          onClick={handleOpenArticleDialog}
+          onClick={() => ensureLoggedIn(() => setOpenArticleDialog(true))}
           startIcon={<AddCircleOutlineIcon />}
         >
           Thêm 1 thằng ngu lái xe
         </Button>
       </Box>
 
+      {/* SORT TABS */}
       <Tabs
         value={selectedTab}
         onChange={(_, v) => setSelectedTab(v)}
-        aria-label="Tabs for cars report categories"
+        aria-label="report tabs"
       >
-        <Tab label="Mới Cập Nhật" />
-        <Tab label="Nhiều Report" />
+        <Tab label="Mới cập nhật" />
+        <Tab label="Nhiều report" />
       </Tabs>
 
-      <div
-        style={{
-          marginTop: 16,
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-        }}
-      >
-        {pagedCars.map((car, i) => {
+      {/* LIST CARS */}
+      <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+        {pagedCars.map((car) => {
           const isLiked = !!liked[car.id];
-          const likeDisplay = car.likeCount;
+
           const commentDisplay =
             (car.commentCount || 0) + (commentAdds[car.id] || 0);
-          const carComments = comments[car.id] || [];
-          const isOpen = !!openComments[car.id];
 
           return (
             <CarCard
-              key={car.id ?? i}
+              key={car.id}
               car={car as any}
               liked={isLiked}
-              likeDisplay={likeDisplay}
+              likeDisplay={car.likeCount}
               commentDisplay={commentDisplay}
-              comments={carComments}
-              openComments={isOpen}
-              toggleLike={() =>
-                ensureLoggedIn(() => toggleLikeInternal(car))
-              }
-              toggleCommentPanel={() =>
-                ensureLoggedIn(() => toggleCommentPanelInternal(car))
+              comments={comments[car.id] || []}
+              openComments={!!openComments[car.id]}
+              toggleLike={() => toggleLike(car)}
+              toggleCommentPanel={() => ensureLoggedIn(() => toggleCommentPanel(car))}
+              handleSubmitComment={(text, files) =>
+                ensureLoggedIn(() => handleSubmitCommentInternal(car, text, files))
               }
 
-              handleSubmitComment={(text, files) =>
-                ensureLoggedIn(() =>
-                  handleSubmitCommentInternal(car, text, files)
-                )
-              }
               onShare={() => handleShare(car)}
             />
           );
         })}
-      </div>
+      </Box>
 
+      {/* PAGINATION */}
       <Pagination
         count={totalPages}
         page={page}
@@ -700,16 +455,18 @@ export default function HomePageClient() {
         color="primary"
       />
 
+      {/* DIALOGS */}
       <ApplyArticleDialog
         open={openArticleDialog}
         onClose={() => setOpenArticleDialog(false)}
         onPublish={handlePublishArticle}
       />
 
+      {/* LOGIN DIALOG */}
       <AuthDialog
         open={openAuth}
         onClose={() => setOpenAuth(false)}
-        onAuthSuccess={({ user: u }) => {
+        onAuthSuccess={({ user: u }) =>
           setUser({
             id: u.id,
             email: u.email,
@@ -719,90 +476,9 @@ export default function HomePageClient() {
             points: u.points,
             joinedAt: u.joinedAt,
             postCount: u.postCount,
-          });
-        }}
-
+          })
+        }
       />
-
-      {/* Profile dialog */}
-      <Dialog
-        open={profileOpen}
-        onClose={() => setProfileOpen(false)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>Hồ sơ người dùng</DialogTitle>
-        <DialogContent
-          sx={{ pt: 2, display: "flex", flexDirection: "column", gap: 2 }}
-        >
-          <TextField
-            label="Email"
-            value={user?.email || ""}
-            fullWidth
-            margin="dense"
-            size="small"
-            disabled
-          />
-          <TextField
-            label="Tên hiển thị"
-            value={profileName}
-            onChange={(e) => setProfileName(e.target.value)}
-            fullWidth
-            margin="dense"
-            size="small"
-          />
-          <TextField
-            label="Avatar URL"
-            value={profileAvatar}
-            onChange={(e) => setProfileAvatar(e.target.value)}
-            fullWidth
-            margin="dense"
-            size="small"
-          />
-
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Đổi mật khẩu
-            </Typography>
-            <TextField
-              label="Mật khẩu mới"
-              type="password"
-              value={profileNewPassword}
-              onChange={(e) => setProfileNewPassword(e.target.value)}
-              fullWidth
-              margin="dense"
-              size="small"
-            />
-            <TextField
-              label="Nhập lại mật khẩu"
-              type="password"
-              value={profileConfirmPassword}
-              onChange={(e) => setProfileConfirmPassword(e.target.value)}
-              fullWidth
-              margin="dense"
-              size="small"
-            />
-          </Box>
-
-          {profileError && (
-            <Typography variant="body2" color="error" sx={{ mt: 1 }}>
-              {profileError}
-            </Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setProfileOpen(false)}>Close</Button>
-          <Button
-            onClick={handleUpdateProfile}
-            disabled={profileSaving}
-            variant="contained"
-          >
-            {profileSaving ? "Đang lưu..." : "Update"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Share dialog */}
       <Dialog
         open={shareOpen}
         onClose={() => setShareOpen(false)}
@@ -810,7 +486,8 @@ export default function HomePageClient() {
         maxWidth="xs"
       >
         <DialogTitle>Chia sẻ link report</DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
+
+        <DialogContent>
           <TextField
             fullWidth
             value={shareLink}
@@ -818,27 +495,23 @@ export default function HomePageClient() {
               readOnly: true,
               endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton onClick={handleCopyShare}>
-                    <ContentCopyIcon fontSize="small" />
+                  <IconButton onClick={() => navigator.clipboard.writeText(shareLink)}>
+                    <ContentCopyIcon />
                   </IconButton>
                 </InputAdornment>
               ),
             }}
           />
-          {copied && (
-            <Typography
-              variant="body2"
-              sx={{ mt: 1 }}
-              color="success.main"
-            >
-              Đã copy vào clipboard
-            </Typography>
-          )}
+          <Typography variant="caption" sx={{ mt: 1 }}>
+            Copy link để gửi cho người khác
+          </Typography>
         </DialogContent>
+
         <DialogActions>
           <Button onClick={() => setShareOpen(false)}>Đóng</Button>
         </DialogActions>
       </Dialog>
+
     </Container>
   );
 }
