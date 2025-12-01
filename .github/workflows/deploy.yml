@@ -19,12 +19,10 @@ jobs:
       - name: Deploy to VPS
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
-            # load nvm + node
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
             APP_DIR=/home/ftpuser/ftp/upload/sucvatlaixe.com
-
             cd "$APP_DIR"
 
             git fetch origin main
@@ -35,6 +33,8 @@ jobs:
             else
               npm install
             fi
+
+            npx prisma migrate deploy
 
             npm run build
 
