@@ -35,11 +35,59 @@ export default function CommentList({ comments }: { comments: CommentItem[] }) {
             </Typography>
           </Typography>
 
-          <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-            {c.text}
-          </Typography>
+          {/* text */}
+          {c.text && (
+            <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+              {c.text}
+            </Typography>
+          )}
 
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
+          {/* media (ảnh / video) */}
+          {c.media && c.media.length > 0 && (
+            <Box
+              sx={{
+                mt: 0.5,
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 1,
+              }}
+            >
+              {c.media.map((m, idx) => (
+                <Box key={m.url + idx}>
+                  {m.type === "image" ? (
+                    <Box
+                      component="img"
+                      src={m.url}
+                      alt={m.name || "image"}
+                      sx={{
+                        width: 80,
+                        height: 80,
+                        borderRadius: 1,
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : m.type === "video" ? (
+                    <Box
+                      component="video"
+                      src={m.url}
+                      controls
+                      sx={{
+                        width: 160,
+                        maxHeight: 120,
+                        borderRadius: 1,
+                      }}
+                    />
+                  ) : null}
+                </Box>
+              ))}
+            </Box>
+          )}
+
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ mt: 0.5, display: "block" }}
+          >
             {new Date(c.createdAt).toLocaleString()}
           </Typography>
         </Box>

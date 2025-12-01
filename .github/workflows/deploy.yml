@@ -1,0 +1,49 @@
+name: Deploy SVLX
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Add SSH key
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: Deploy to VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            APP_DIR=/home/ftpuser/ftp/upload/sucvatlaixe.com
+            REPO_URL=https://github.com/royaldragonit/svlx.git
+
+            # nếu chưa có repo git thì clone
+            if [ ! -d \"\$APP_DIR/.git\" ]; then
+              mkdir -p \"\$APP_DIR\"
+              git clone \"\$REPO_URL\" \"\$APP_DIR\"
+            fi
+
+            cd \"\$APP_DIR\"
+
+            # đồng bộ code main
+            git fetch origin main
+            git reset --hard origin/main
+
+            # cài deps (nếu có package-lock thì dùng npm ci)
+            if [ -f package-lock.json ]; then
+              npm ci
+            else
+              npm install
+            fi
+
+            # build nextjs
+            npm run build
+
+            # start/restart pm2
+            pm2 restart svlx || pm2 start npm --name svlx -- start
+          "

@@ -1,7 +1,11 @@
-// src/app/page.tsx
-
+// page.tsx
+import { Suspense } from "react";
 import HomePageClient from "./HomePageClient";
 
 export default function Page() {
-  return <HomePageClient />;
+  return (
+    <Suspense>
+      <HomePageClient />
+    </Suspense>
+  );
 }

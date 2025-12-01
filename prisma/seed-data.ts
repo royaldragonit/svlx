@@ -1,7 +1,6 @@
 // prisma/seed-data.ts
-import type { Prisma } from "@prisma/client";
 
-export const seedUsers: Prisma.UserCreateManyInput[] = [
+export const seedUsers = [
   {
     id: 1n,
     email: "demo1@sucvatlaixe.com",
@@ -25,7 +24,7 @@ export const seedUsers: Prisma.UserCreateManyInput[] = [
   },
 ];
 
-export const seedReports: Prisma.CarReportCreateManyInput[] = [
+export const seedReports = [
   {
     id: 1n,
     authorId: 1n,
@@ -148,7 +147,7 @@ export const seedReports: Prisma.CarReportCreateManyInput[] = [
   },
 ];
 
-export const seedComments: Prisma.CommentCreateManyInput[] = [
+export const seedComments = [
   {
     id: 1n,
     reportId: 1n,
@@ -186,7 +185,7 @@ export const seedComments: Prisma.CommentCreateManyInput[] = [
   },
 ];
 
-export const seedCommentMedia: Prisma.CommentMediaCreateManyInput[] = [
+export const seedCommentMedia = [
   {
     id: 1n,
     commentId: 1n,
@@ -211,7 +210,7 @@ export const seedCommentMedia: Prisma.CommentMediaCreateManyInput[] = [
   },
 ];
 
-export const seedReportMedia: Prisma.ReportMediaCreateManyInput[] = [
+export const seedReportMedia = [
   {
     id: 1n,
     reportId: 1n,
@@ -236,7 +235,7 @@ export const seedReportMedia: Prisma.ReportMediaCreateManyInput[] = [
   },
 ];
 
-export const seedUserLikes: Prisma.UserLikeCreateManyInput[] = [
+export const seedUserLikes  = [
   // like report
   {
     userId: 1n,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { verifyToken } from "@/lib/auth";
 
 function serializeBigInt<T>(data: T): T {
   return JSON.parse(
@@ -9,9 +10,82 @@ function serializeBigInt<T>(data: T): T {
   );
 }
 
-export async function GET() {
+// ================== GET LIST / DETAIL ==================
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const search = searchParams.get("search")?.trim() || "";
+  const sort = searchParams.get("sort")?.trim() || "latest";
+  const reportIdParam = searchParams.get("report_id");
+
+  const token = req.cookies.get("auth_token")?.value;
+  const payload = token ? verifyToken(token) : null;
+  const currentUserId = payload ? BigInt(payload.userId) : null;
+
+  // detail 1 report theo report_id
+  if (reportIdParam) {
+    try {
+      const id = BigInt(reportIdParam);
+
+      const report = await db.carReport.findUnique({
+        where: { id },
+        include: {
+          author: true,
+          media: true,
+          _count: {
+            select: { comments: true },
+          },
+        },
+      });
+
+      let result: any[] = [];
+      if (report) {
+        let likedByCurrentUser = false;
+
+        if (currentUserId) {
+          const like = await db.userLike.findUnique({
+            where: {
+              userId_targetType_targetId: {
+                userId: currentUserId,
+                targetType: "report",
+                targetId: report.id,
+              },
+            },
+          });
+          likedByCurrentUser = !!like;
+        }
+
+        result = [{ ...report, likedByCurrentUser }];
+      }
+
+      return NextResponse.json(serializeBigInt(result));
+    } catch {
+      return NextResponse.json(serializeBigInt([]));
+    }
+  }
+
+  // list
+  const where: any = {};
+
+  if (search) {
+    where.OR = [
+      { plateNumber: { contains: search, mode: "insensitive" } },
+      { title: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+      { location: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  const orderBy: any[] = [];
+  if (sort === "most_commented") {
+    orderBy.push({ comments: { _count: "desc" } });
+    orderBy.push({ createdAt: "desc" });
+  } else {
+    orderBy.push({ createdAt: "desc" });
+  }
+
   const reports = await db.carReport.findMany({
-    orderBy: { createdAt: "desc" },
+    where,
+    orderBy,
     take: 50,
     include: {
       author: true,
@@ -22,40 +96,115 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json(serializeBigInt(reports));
+  let result: any[] = reports;
+
+  if (currentUserId && reports.length > 0) {
+    const ids = reports.map((r) => r.id);
+
+    const likes = await db.userLike.findMany({
+      where: {
+        userId: currentUserId,
+        targetType: "report",
+        targetId: { in: ids },
+      },
+      select: {
+        targetId: true,
+      },
+    });
+
+    const likedSet = new Set(likes.map((l) => l.targetId.toString()));
+
+    result = reports.map((r) => ({
+      ...r,
+      likedByCurrentUser: likedSet.has(r.id.toString()),
+    }));
+  }
+
+  return NextResponse.json(serializeBigInt(result));
 }
 
+// ================== POST TẠO CAR REPORT ==================
+type CreateReportBody = {
+  title: string;
+  body: string;
+  tags?: string;
+  plateNumber?: string;
+  carType?: string;
+  location?: string;
+  media?: {
+    kind: "image" | "video";
+    url: string;
+    fileName?: string;
+  }[];
+};
+
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const media = Array.isArray(body.media) ? body.media : [];
-  const mainImage =
-    media.find((m: any) => m.kind === "image")?.url ?? body.mainImageUrl ?? null;
+  try {
+    // check auth
+    const token = req.cookies.get("auth_token")?.value;
+    if (!token) {
+      return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
+    }
 
-  const report = await db.carReport.create({
-    data: {
-      authorId: body.authorId ?? 1,
-      plateNumber: body.plateNumber ?? "UNKNOWN",
-      title: body.title,
-      description: body.body,
-      carType: body.carType ?? "",
-      location: body.location ?? "",
-      mainImageUrl: mainImage,
-      categoryTag: body.tags ?? null,
-      media: {
-        create: media.map((m: any) => ({
-          mediaType: m.kind,
-          url: m.url,
-        })),
-      },
-    },
-    include: {
-      author: true,
-      media: true,
-      _count: {
-        select: { comments: true },
-      },
-    },
-  });
+    const payload = verifyToken(token);
+    if (!payload) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
 
-  return NextResponse.json(serializeBigInt(report), { status: 201 });
+    const bodyJson = (await req.json()) as CreateReportBody;
+
+    const title = (bodyJson.title || "").trim();
+    const description = (bodyJson.body || "").trim();
+    const tags = (bodyJson.tags || "").trim();
+    const plateNumber = (bodyJson.plateNumber || "").trim();
+    const carType = (bodyJson.carType || "").trim();
+    const location = (bodyJson.location || "").trim();
+    const media = Array.isArray(bodyJson.media) ? bodyJson.media : [];
+
+    if (!title && !description) {
+      return NextResponse.json(
+        { error: "Tiêu đề hoặc nội dung không được trống" },
+        { status: 400 }
+      );
+    }
+
+    const firstImage = media.find((m) => m.kind === "image");
+    const authorId = BigInt(payload.userId);
+
+    const created = await db.carReport.create({
+      data: {
+        plateNumber: plateNumber || "",          // tạm thời cho phép rỗng
+        title,
+        description,
+        carType: carType || "",
+        location: location || "",
+        categoryTag: tags || null,
+        mainImageUrl: firstImage?.url || null,
+        authorId,
+        likeCount: 0,
+        shareCount: 0,
+        media: {
+          create: media.map((m) => ({
+            mediaType: m.kind,
+            url: m.url,
+            fileName: m.fileName ?? null,
+          })),
+        },
+      },
+      include: {
+        author: true,
+        media: true,
+        _count: { select: { comments: true } },
+      },
+    });
+
+    // trả về cùng format với GET (để mapReportToCarUiItem dùng được)
+    return NextResponse.json(serializeBigInt(created), { status: 201 });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
 }

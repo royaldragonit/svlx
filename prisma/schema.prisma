@@ -14,7 +14,10 @@ model User {
   avatarUrl    String?
   rank         String?
   createdAt    DateTime @default(now())
-
+  points      Int         @default(0)
+  joinedAt    DateTime    @default(now())
+  postCount   Int         @default(0)
+  role         String?
   carReports   CarReport[]
   comments     Comment[]
   likes        UserLike[]
