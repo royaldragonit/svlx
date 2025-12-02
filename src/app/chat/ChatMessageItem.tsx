@@ -16,6 +16,20 @@ type Props = {
 };
 
 export function ChatMessageItem({ message: m, isMe, currentUserAvatar }: Props) {
+  const isAdmin = m.role === "admin";
+
+  const bubbleBg = isAdmin
+    ? "error.main"
+    : isMe
+    ? "primary.main"
+    : "grey.200";
+
+  const bubbleColor = isAdmin
+    ? "error.contrastText"
+    : isMe
+    ? "primary.contrastText"
+    : "text.primary";
+
   return (
     <ListItem
       sx={{
@@ -49,7 +63,7 @@ export function ChatMessageItem({ message: m, isMe, currentUserAvatar }: Props) 
                   Tham gia: {new Date(m.joinedAt).toLocaleDateString()}
                 </Typography>
                 <Typography variant="body2">Bài viết: {m.posts}</Typography>
-                {m.role === "admin" && (
+                {isAdmin && (
                   <Typography variant="body2" color="error">
                     Quyền: Admin
                   </Typography>
@@ -58,21 +72,21 @@ export function ChatMessageItem({ message: m, isMe, currentUserAvatar }: Props) 
             }
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-              {/* Huy hiệu admin */}
-              {m.role === "admin" && (
+              {/* Label ADMIN nền xanh */}
+              {isAdmin && (
                 <Box
                   sx={{
-                    px: 0.5,
-                    py: 0.1,
-                    bgcolor: "error.main",
-                    color: "white",
+                    px: 0.7,
+                    py: 0.2,
+                    borderRadius: 1,
+                    bgcolor: "success.main",
+                    color: "success.contrastText",
                     fontSize: "10px",
-                    borderRadius: 0.5,
                     fontWeight: 700,
-                    height: "fit-content",
+                    textTransform: "uppercase",
                   }}
                 >
-                  ADMIN
+                  Admin
                 </Box>
               )}
 
@@ -83,7 +97,7 @@ export function ChatMessageItem({ message: m, isMe, currentUserAvatar }: Props) 
                 variant="subtitle2"
                 sx={{
                   fontWeight: 600,
-                  color: m.role === "admin" ? "error.main" : "#838181ff",
+                  color: isAdmin ? "error.main" : "#838181ff",
                   textDecoration: "none",
                   "&:hover": { textDecoration: "underline" },
                 }}
@@ -92,7 +106,6 @@ export function ChatMessageItem({ message: m, isMe, currentUserAvatar }: Props) 
               </Typography>
             </Box>
           </Tooltip>
-
 
           <Typography variant="caption" color="text.secondary">
             {new Date(m.createdAt).toLocaleTimeString("vi-VN", {
@@ -103,7 +116,10 @@ export function ChatMessageItem({ message: m, isMe, currentUserAvatar }: Props) 
         </Box>
 
         {isMe && (
-          <Avatar src={currentUserAvatar || undefined} sx={{ width: 32, height: 32 }} />
+          <Avatar
+            src={currentUserAvatar || undefined}
+            sx={{ width: 32, height: 32 }}
+          />
         )}
       </Box>
 
@@ -111,10 +127,12 @@ export function ChatMessageItem({ message: m, isMe, currentUserAvatar }: Props) 
       <Box
         sx={{
           maxWidth: "70%",
-          bgcolor: isMe ? "primary.main" : "grey.200",
-          color: isMe ? "primary.contrastText" : "text.primary",
+          bgcolor: bubbleBg,
+          color: bubbleColor,
           borderRadius: 2,
           p: 1,
+          boxShadow: isAdmin ? 3 : 0,
+          border: isAdmin ? "1px solid rgba(244,67,54,0.4)" : undefined,
         }}
       >
         {m.text && (

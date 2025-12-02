@@ -14,4 +14,5 @@ export type CarItem = {
   authorName: string;
   authorRank: "Bạc" | "Vàng" | "Kim Cương";
   createdAt: string;
+  authorId: number;
 };
