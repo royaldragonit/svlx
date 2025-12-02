@@ -1,16 +1,16 @@
+// src/app/chat/page.tsx
+
 "use client";
 
 import {
   AppBar,
-  Avatar,
   Box,
-  Button,
   Container,
   Paper,
   Toolbar,
   Typography,
+  Button,
 } from "@mui/material";
-import Link from "next/link";
 import { io } from "socket.io-client";
 import { useEffect, useRef, useState } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -18,19 +18,22 @@ import { ChatMessage, OnlineUser } from "./types";
 import { MessageList } from "./MessageList";
 import { OnlineUsersList } from "./OnlineUsersList";
 import { ChatInput } from "./ChatInput";
+import AuthDialog from "../Dialogs/AuthDialog";
 
 export default function ChatPage() {
-  const { user, loading } = useCurrentUser();
+  const { user, loading, setUser } = useCurrentUser();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [input, setInput] = useState("");
   const [selectedImage, setSelectedImage] = useState<any>(null);
   const [sending, setSending] = useState(false);
+  const [openAuth, setOpenAuth] = useState(false);
 
   const socketRef = useRef<any>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
 
+  // socket chỉ init khi đã có user
   useEffect(() => {
     if (loading || !user) return;
 
@@ -58,6 +61,7 @@ export default function ChatPage() {
         points: user.points,
         joinedAt: user.joinedAt,
         postCount: user.postCount,
+        role: user.role ?? "member",
       });
 
       socket.on("chat:message", (msg: ChatMessage) => {
@@ -74,28 +78,41 @@ export default function ChatPage() {
     };
   }, [loading, user?.id]);
 
+  // auto scroll
   useEffect(() => {
     if (listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
   }, [messages]);
 
+  // lắng nghe event mở AuthDialog từ header
+  useEffect(() => {
+    const open = () => setOpenAuth(true);
+    window.addEventListener("open-auth-dialog", open);
+    return () => window.removeEventListener("open-auth-dialog", open);
+  }, []);
+
   const sendMessage = () => {
     if (!socketRef.current) return;
+    if (!user) {
+      setOpenAuth(true);
+      return;
+    }
     if (!input.trim() && !selectedImage) return;
 
     setSending(true);
 
     socketRef.current.emit("chat:message", {
-      userId: user?.id,
-      userName: user?.displayName,
-      avatarUrl: user?.avatarUrl,
-      rank: user?.rank,
-      points: user?.points,
-      joinedAt: user?.joinedAt,
-      posts: user?.postCount,
+      userId: user.id,
+      userName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      rank: user.rank,
+      points: user.points,
+      joinedAt: user.joinedAt,
+      posts: user.postCount,
       text: input.trim(),
       imageData: selectedImage?.dataUrl || null,
+      role: user.role ?? "member",
     });
 
     setInput("");
@@ -104,7 +121,6 @@ export default function ChatPage() {
   };
 
   if (loading) return <Typography>Loading...</Typography>;
-  if (!user) return <Typography>Need login</Typography>;
 
   return (
     <Container sx={{ mt: 2, mb: 4 }}>
@@ -118,23 +134,53 @@ export default function ChatPage() {
             </Toolbar>
           </AppBar>
 
-          <Paper sx={{ p: 2, height: "70vh", display: "flex", flexDirection: "column" }}>
-            <Box ref={listRef} sx={{ flex: 1, overflowY: "auto", pr: 1 }}>
-              <MessageList
-                messages={messages}
-                currentUserId={user.id}
-                currentUserAvatar={user.avatarUrl}
-              />
-            </Box>
+          <Paper
+            sx={{
+              p: 2,
+              height: "70vh",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            {user ? (
+              <>
+                <Box ref={listRef} sx={{ flex: 1, overflowY: "auto", pr: 1 }}>
+                  <MessageList
+                    messages={messages}
+                    currentUserId={user.id}
+                    currentUserAvatar={user.avatarUrl}
+                  />
+                </Box>
 
-            <ChatInput
-              input={input}
-              setInput={setInput}
-              sending={sending}
-              onSend={sendMessage}
-              selectedImage={selectedImage}
-              setSelectedImage={setSelectedImage}
-            />
+                <ChatInput
+                  input={input}
+                  setInput={setInput}
+                  sending={sending}
+                  onSend={sendMessage}
+                  selectedImage={selectedImage}
+                  setSelectedImage={setSelectedImage}
+                />
+              </>
+            ) : (
+              <Box
+                sx={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 2,
+                  textAlign: "center",
+                }}
+              >
+                <Typography variant="body1">
+                  Bạn cần đăng nhập để tham gia chat.
+                </Typography>
+                <Button variant="contained" onClick={() => setOpenAuth(true)}>
+                  Đăng nhập
+                </Button>
+              </Box>
+            )}
           </Paper>
         </Box>
 
@@ -146,6 +192,25 @@ export default function ChatPage() {
           <OnlineUsersList users={onlineUsers} />
         </Paper>
       </Box>
+
+      {/* LOGIN DIALOG */}
+      <AuthDialog
+        open={openAuth}
+        onClose={() => setOpenAuth(false)}
+        onAuthSuccess={({ user: u }) => {
+          setUser({
+            id: u.id,
+            email: u.email,
+            displayName: u.displayName,
+            avatarUrl: u.avatarUrl,
+            rank: u.rank,
+            points: u.points,
+            joinedAt: u.joinedAt,
+            postCount: u.postCount,
+            role: u.role,
+          });
+        }}
+      />
     </Container>
   );
 }

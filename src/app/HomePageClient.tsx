@@ -150,6 +150,7 @@ export default function HomePageClient() {
             }))
             : [],
           likedByCurrentUser: r.likedByCurrentUser ?? false,
+          authorId: Number(r.author?.id ?? r.authorId ?? 0),
         }));
 
         const likedMap: Record<number, boolean> = {};
@@ -268,6 +269,8 @@ export default function HomePageClient() {
             authorRank: created.author?.rank ?? "Bạc",
             createdAt: created.createdAt,
             media: created.media ?? [],
+            likedByCurrentUser: false,
+            authorId: Number(created.author?.id ?? created.authorId ?? user?.id ?? 0),
           },
           ...prev,
         ]);

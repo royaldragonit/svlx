@@ -3,6 +3,16 @@ import { db } from "@/lib/db";
 import { verifyToken } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 
+const MAX_LIKE_POINTS_PER_REPORT = 30;
+const LIKE_POINT = 1;
+
+function getRank(points: number): string {
+  if (points >= 700) return "Kim cương";
+  if (points >= 300) return "Bạch kim";
+  if (points >= 100) return "Vàng";
+  return "Bạc";
+}
+
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -18,7 +28,7 @@ export async function POST(
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    const { id } = await context.params; 
+    const { id } = await context.params;
     const reportId = BigInt(id);
     const userId = BigInt(payload.userId);
 
@@ -55,11 +65,33 @@ export async function POST(
               decrement: 1,
             },
           },
-          select: { likeCount: true },
+          select: { likeCount: true, authorId: true },
         });
 
         liked = false;
         likeCount = Math.max(0, report.likeCount);
+
+        // trừ điểm cho tác giả nếu like này nằm trong 30 like đầu
+        const beforeCount = likeCount + 1; // count trước khi giảm
+        if (
+          beforeCount <= MAX_LIKE_POINTS_PER_REPORT &&
+          report.authorId !== userId
+        ) {
+          const userAfterPoint = await tx.user.update({
+            where: { id: report.authorId },
+            data: {
+              points: { decrement: LIKE_POINT },
+            },
+            select: { points: true },
+          });
+
+          const newRank = getRank(userAfterPoint.points);
+
+          await tx.user.update({
+            where: { id: report.authorId },
+            data: { rank: newRank },
+          });
+        }
       } else {
         // LIKE
         await tx.userLike.create({
@@ -77,11 +109,32 @@ export async function POST(
               increment: 1,
             },
           },
-          select: { likeCount: true },
+          select: { likeCount: true, authorId: true },
         });
 
         liked = true;
         likeCount = report.likeCount;
+
+        // cộng điểm cho tác giả nếu nằm trong 30 like đầu, và không tự like
+        if (
+          report.likeCount <= MAX_LIKE_POINTS_PER_REPORT &&
+          report.authorId !== userId
+        ) {
+          const userAfterPoint = await tx.user.update({
+            where: { id: report.authorId },
+            data: {
+              points: { increment: LIKE_POINT },
+            },
+            select: { points: true },
+          });
+
+          const newRank = getRank(userAfterPoint.points);
+
+          await tx.user.update({
+            where: { id: report.authorId },
+            data: { rank: newRank },
+          });
+        }
       }
 
       return { liked, likeCount };

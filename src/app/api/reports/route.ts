@@ -10,6 +10,30 @@ function serializeBigInt<T>(data: T): T {
   );
 }
 
+// ================== POINTS + RANK ==================
+
+function calcReportPoint(media: { kind?: string; mediaType?: string }[]): number {
+  const hasImage = media.some(
+    (m) => m.kind === "image" || m.mediaType === "image"
+  );
+  const hasVideo = media.some(
+    (m) => m.kind === "video" || m.mediaType === "video"
+  );
+
+  if (hasImage && hasVideo) return 15;
+  if (hasVideo) return 13;
+  if (hasImage) return 12;
+  return 10;
+}
+
+// 4 rank: Bạc < Vàng < Bạch kim < Kim cương
+function getRank(points: number): string {
+  if (points >= 700) return "Kim cương";
+  if (points >= 300) return "Bạch kim";
+  if (points >= 100) return "Vàng";
+  return "Bạc";
+}
+
 // ================== GET LIST / DETAIL ==================
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -170,32 +194,54 @@ export async function POST(req: NextRequest) {
 
     const firstImage = media.find((m) => m.kind === "image");
     const authorId = BigInt(payload.userId);
+    const reportPoints = calcReportPoint(media);
 
-    const created = await db.carReport.create({
-      data: {
-        plateNumber: plateNumber || "",          // tạm thời cho phép rỗng
-        title,
-        description,
-        carType: carType || "",
-        location: location || "",
-        categoryTag: tags || null,
-        mainImageUrl: firstImage?.url || null,
-        authorId,
-        likeCount: 0,
-        shareCount: 0,
-        media: {
-          create: media.map((m) => ({
-            mediaType: m.kind,
-            url: m.url,
-            fileName: m.fileName ?? null,
-          })),
+    const created = await db.$transaction(async (tx) => {
+      const createdReport = await tx.carReport.create({
+        data: {
+          plateNumber: plateNumber || "", // tạm thời cho phép rỗng
+          title,
+          description,
+          carType: carType || "",
+          location: location || "",
+          categoryTag: tags || null,
+          mainImageUrl: firstImage?.url || null,
+          authorId,
+          likeCount: 0,
+          shareCount: 0,
+          media: {
+            create: media.map((m) => ({
+              mediaType: m.kind,
+              url: m.url,
+              fileName: m.fileName ?? null,
+            })),
+          },
         },
-      },
-      include: {
-        author: true,
-        media: true,
-        _count: { select: { comments: true } },
-      },
+        include: {
+          author: true,
+          media: true,
+          _count: { select: { comments: true } },
+        },
+      });
+
+      // cộng điểm + tăng postCount + cập nhật rank
+      const userAfterPoint = await tx.user.update({
+        where: { id: authorId },
+        data: {
+          points: { increment: reportPoints },
+          postCount: { increment: 1 },
+        },
+        select: { points: true },
+      });
+
+      const newRank = getRank(userAfterPoint.points);
+
+      await tx.user.update({
+        where: { id: authorId },
+        data: { rank: newRank },
+      });
+
+      return createdReport;
     });
 
     // trả về cùng format với GET (để mapReportToCarUiItem dùng được)

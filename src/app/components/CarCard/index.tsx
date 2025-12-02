@@ -18,6 +18,7 @@ import {
   ShareOutlined as ShareOutlinedIcon,
   Close as CloseIcon,
 } from "@mui/icons-material";
+import Link from "next/link";
 import CommentList from "../Comments/CommentList";
 import CommentComposer from "../Comments/CommentComposer";
 import { CarItem } from "@/app/data/types";
@@ -39,6 +40,14 @@ type Props = {
   handleSubmitComment: (text: string, files: File[]) => void;
   onShare?: () => void;
 };
+
+function getRankColor(rank: string | undefined | null) {
+  if (!rank) return "text.secondary";
+  if (rank.includes("Kim cương")) return "#0ea5e9";
+  if (rank.includes("Bạch kim")) return "#6366f1";
+  if (rank.includes("Vàng")) return "#eab308";
+  return "#6b7280";
+}
 
 export default function CarCard({
   car,
@@ -68,6 +77,19 @@ export default function CarCard({
   };
 
   const mediaHeight = 140;
+
+  const createdAtText = React.useMemo(() => {
+    if (!car.createdAt) return "";
+    const d = new Date(car.createdAt as any);
+    if (Number.isNaN(d.getTime())) return car.createdAt as any;
+    return d.toLocaleString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }, [car.createdAt]);
 
   return (
     <>
@@ -120,10 +142,31 @@ export default function CarCard({
             <CardContent>
               <Box sx={{ mb: 1 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                  {car.authorName} • {car.authorRank}
+                  <Box component="span">
+                    <Link
+                      href={`/user/${car.authorId}`}
+                      style={{
+                        textDecoration: "none",
+                        color: "#2563eb",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {car.authorName}
+                    </Link>
+                    {" "}
+                    <Box
+                      component="span"
+                      sx={{
+                        color: getRankColor(car.authorRank),
+                        fontWeight: 600,
+                      }}
+                    >
+                      ({car.authorRank})
+                    </Box>
+                  </Box>
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {car.createdAt}
+                  {createdAtText}
                 </Typography>
               </Box>
 
