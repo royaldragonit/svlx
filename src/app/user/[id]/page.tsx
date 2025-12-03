@@ -92,9 +92,9 @@ export default function UserPage({ params }: { params: Promise<{ id: string }> }
 
   return (
     <Container sx={{ mt: 3, mb: 4 }}>
-      <Box sx={{ display: "flex", gap: 3 }}>
+      <Box sx={{ display: "flex", gap: 3,flexDirection: { xs: "column", md: "row" }, }}>
         {/* LEFT COLUMN */}
-        <Paper sx={{ width: 260, p: 2 }}>
+        <Paper sx={{ width: { xs: "100%", md: 260 }, p: 2 }}>
           <Box sx={{ textAlign: "center" }}>
             <Avatar
               src={user.avatarUrl || undefined}

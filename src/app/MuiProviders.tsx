@@ -23,7 +23,8 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import AuthDialog from "./Dialogs/AuthDialog";
 
 const theme = createTheme({});
 
@@ -41,12 +42,21 @@ export default function MuiProviders({ children }: { children: React.ReactNode }
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
-    } catch { }
+    } catch {}
     setUser(null);
     handleAvatarMenuClose();
   };
 
-  // PROFILE dialogs
+  // ========== AUTH DIALOG ==========
+  const [openAuth, setOpenAuth] = useState(false);
+
+  useEffect(() => {
+    const open = () => setOpenAuth(true);
+    window.addEventListener("open-auth-dialog", open);
+    return () => window.removeEventListener("open-auth-dialog", open);
+  }, []);
+
+  // ========== PROFILE DIALOG ==========
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileName, setProfileName] = useState("");
@@ -142,7 +152,6 @@ export default function MuiProviders({ children }: { children: React.ReactNode }
                 />
               </Link>
 
-
               <Typography
                 component={Link}
                 href="/"
@@ -158,7 +167,6 @@ export default function MuiProviders({ children }: { children: React.ReactNode }
               >
                 Súc vật lái xe
               </Typography>
-
 
               {user ? (
                 <>
@@ -193,7 +201,6 @@ export default function MuiProviders({ children }: { children: React.ReactNode }
                       Đổi mật khẩu
                     </MenuItem>
 
-                    {/* NEW: MENU → Bài viết */}
                     <MenuItem
                       component={Link}
                       href={`/user/${user.id}`}
@@ -211,13 +218,11 @@ export default function MuiProviders({ children }: { children: React.ReactNode }
                   color="inherit"
                   disabled={loading}
                   onClick={() => {
-                    // bật AuthDialog thông qua event custom từ layout
                     window.dispatchEvent(new CustomEvent("open-auth-dialog"));
                   }}
                 >
                   Đăng nhập
                 </Button>
-
               )}
             </Toolbar>
           </AppBar>
@@ -292,21 +297,11 @@ export default function MuiProviders({ children }: { children: React.ReactNode }
           </Box>
         </Box>
 
-        {/* Profile Dialog */}
+        {/* PROFILE DIALOG */}
         <Dialog open={profileOpen} onClose={() => setProfileOpen(false)} fullWidth maxWidth="sm">
           <DialogTitle>Hồ sơ người dùng</DialogTitle>
-
           <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-
-            {/* PERSONAL INFO */}
-            <Box
-              component="fieldset"
-              sx={{
-                border: "1px solid #ccc",
-                borderRadius: 2,
-                p: 2,
-              }}
-            >
+            <Box component="fieldset" sx={{ border: "1px solid #ccc", borderRadius: 2, p: 2 }}>
               <Typography component="legend" sx={{ px: 1, fontSize: 14, fontWeight: 600 }}>
                 Thông tin cá nhân
               </Typography>
@@ -317,9 +312,7 @@ export default function MuiProviders({ children }: { children: React.ReactNode }
                   value={user?.email || ""}
                   fullWidth
                   disabled
-                  InputProps={{
-                    sx: { bgcolor: "#f5f5f5" }            // giúp nhìn rõ, không bị mờ/che
-                  }}
+                  InputProps={{ sx: { bgcolor: "#f5f5f5" } }}
                 />
 
                 <TextField
@@ -338,15 +331,7 @@ export default function MuiProviders({ children }: { children: React.ReactNode }
               </Box>
             </Box>
 
-            {/* CHANGE PASSWORD */}
-            <Box
-              component="fieldset"
-              sx={{
-                border: "1px solid #ccc",
-                borderRadius: 2,
-                p: 2,
-              }}
-            >
+            <Box component="fieldset" sx={{ border: "1px solid #ccc", borderRadius: 2, p: 2 }}>
               <Typography component="legend" sx={{ px: 1, fontSize: 14, fontWeight: 600 }}>
                 Đổi mật khẩu
               </Typography>
@@ -385,13 +370,34 @@ export default function MuiProviders({ children }: { children: React.ReactNode }
           </DialogActions>
         </Dialog>
 
+        {/* GLOBAL AUTH DIALOG */}
+        <AuthDialog
+          open={openAuth}
+          onClose={() => setOpenAuth(false)}
+          onAuthSuccess={({ user: u }) => {
+            setUser({
+              id: u.id,
+              email: u.email,
+              displayName: u.displayName,
+              avatarUrl: u.avatarUrl,
+              rank: u.rank,
+              points: u.points,
+              joinedAt: u.joinedAt,
+              postCount: u.postCount,
+              role: u.role,
+            });
+            setOpenAuth(false);
+          }}
+        />
 
+        {/* GLOBAL STYLES */}
         <style jsx global>{`
           @keyframes marquee {
             0% { transform: translateX(100%); }
             100% { transform: translateX(-100%); }
           }
         `}</style>
+
       </ThemeProvider>
     </AppRouterCacheProvider>
   );

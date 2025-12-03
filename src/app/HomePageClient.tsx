@@ -128,7 +128,7 @@ export default function HomePageClient() {
         
         const mapped = data.map((r: any) => ({
           id: r.id,
-          name: `${r.plateNumber} - ${r.title}`,
+          name: `${r.title}`,
           plateNumber: r.plateNumber,
           description: r.description,
           type: r.carType ?? "",
@@ -255,7 +255,7 @@ export default function HomePageClient() {
         setCars((prev) => [
           {
             id: created.id,
-            name: `${created.plateNumber} - ${created.title}`,
+            name: `${created.title}`,
             plateNumber: created.plateNumber,
             description: created.description,
             type: created.carType ?? "",

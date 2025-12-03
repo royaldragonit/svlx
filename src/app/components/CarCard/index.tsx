@@ -61,12 +61,11 @@ export default function CarCard({
   handleSubmitComment,
   onShare,
 }: Props) {
-  
+
   const imageUrl = car.image;
   const videoUrl =
     car.media?.find((m) => m.mediaType === "video")?.url || undefined;
-  console.log("car",car);
-  
+
   const [openImageViewer, setOpenImageViewer] = React.useState(false);
 
   const handleOpenImage = () => {
@@ -142,7 +141,10 @@ export default function CarCard({
           <Typography variant="caption" color="text.secondary">
             {createdAtText}
           </Typography>
-
+          {/* TITLE */}
+          <Typography variant="h6" sx={{ mt: 1, fontWeight: 700 }}>
+            {car.name}
+          </Typography>
           {/* TEXT */}
           <Typography variant="body1" sx={{ mt: 1 }}>
             {truncateText(car.description, 350)}
