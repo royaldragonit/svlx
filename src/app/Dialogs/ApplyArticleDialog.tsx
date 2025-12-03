@@ -119,7 +119,12 @@ export default function ApplyArticleDialog({ open, onClose, onPublish }: Props) 
 
   const handlePublish = async () => {
     if (!onPublish) return;
-
+    
+    const plateRegex = /^[0-9]{2}[A-Z]-[0-9]{4,5}$/;
+    if (!plateRegex.test(plateNumber.toUpperCase())) {
+      alert("Biển số sai. Ví dụ đúng: 51F-12345");
+      return;
+    }
     setLoading(true);
 
     const success = await onPublish({

@@ -411,7 +411,7 @@ export default function HomePageClient() {
       <TextField
         fullWidth
         sx={{ mt: 1, mb: 2 }}
-        label="Tìm theo biển số xe ví dụ: 51A12345"
+        label="Tìm theo biển số xe ví dụ: 51A-12345"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
       />

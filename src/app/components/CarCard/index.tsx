@@ -143,11 +143,13 @@ export default function CarCard({
           </Typography>
           {/* TITLE */}
           <Typography variant="h6" sx={{ mt: 1 }}>
-            <Box component="span" sx={{ fontWeight: 600,color:'#eb4444ff' }}>
-              [{car.plateNumber}] 
+            <Box component="span" sx={{ fontWeight: 600, color: '#eb4444ff' }}>
+              <Link href={`/bien-so/${car.plateNumber}`}>
+                [{car.plateNumber}]
+              </Link>
             </Box>
             <Box component="span" sx={{ fontWeight: 600 }}>
-               - {car.name}
+              - {car.name}
             </Box>
           </Typography>
           {/* TEXT */}
