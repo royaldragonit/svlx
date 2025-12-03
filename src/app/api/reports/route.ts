@@ -140,6 +140,7 @@ export async function GET(req: NextRequest) {
 
     result = reports.map((r) => ({
       ...r,
+      authorAvatar: r.author.avatarUrl || "",
       likedByCurrentUser: likedSet.has(r.id.toString()),
     }));
   }
@@ -244,8 +245,14 @@ export async function POST(req: NextRequest) {
       return createdReport;
     });
 
-    // trả về cùng format với GET (để mapReportToCarUiItem dùng được)
-    return NextResponse.json(serializeBigInt(created), { status: 201 });
+    return NextResponse.json(
+      serializeBigInt({
+        ...created,
+        authorAvatar: created.author?.avatarUrl ?? null,
+      }),
+      { status: 201 }
+    );
+
   } catch (e) {
     console.error(e);
     return NextResponse.json(

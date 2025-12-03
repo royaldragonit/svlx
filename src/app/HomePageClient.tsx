@@ -124,7 +124,8 @@ export default function HomePageClient() {
         if (!res.ok) return;
 
         const data = await res.json();
-
+        console.log("Data",data);
+        
         const mapped = data.map((r: any) => ({
           id: r.id,
           name: `${r.plateNumber} - ${r.title}`,
@@ -149,6 +150,7 @@ export default function HomePageClient() {
               url: m.url,
             }))
             : [],
+          avatar: r.authorAvatar,
           likedByCurrentUser: r.likedByCurrentUser ?? false,
           authorId: Number(r.author?.id ?? r.authorId ?? 0),
         }));
@@ -248,7 +250,8 @@ export default function HomePageClient() {
         });
 
         const created: any = await res.json(); // API chưa typed nên dùng any
-
+        console.log("Created",created);
+        
         setCars((prev) => [
           {
             id: created.id,
@@ -266,6 +269,7 @@ export default function HomePageClient() {
               created.media?.find((m: any) => m.mediaType === "image")?.url ||
               "/cars/car-placeholder.png",
             authorName: created.author?.displayName ?? "Ẩn danh",
+            avatar: created.authorAvatar,
             authorRank: created.author?.rank ?? "Bạc",
             createdAt: created.createdAt,
             media: created.media ?? [],
@@ -343,6 +347,7 @@ export default function HomePageClient() {
         })),
         createdAt: new Date(created.createdAt).getTime(),
         authorName: user.displayName || user.email || "User",
+        avatar: user?.avatarUrl || "",
         authorRank: user.rank || "Bạc",
       };
 

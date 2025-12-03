@@ -11,6 +11,7 @@ export type CommentItem = {
   media: CommentMedia[];
   createdAt: number;
   authorName: string;
+  avatar: string;
   authorRank: string;
 };
 

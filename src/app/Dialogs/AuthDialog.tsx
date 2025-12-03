@@ -114,7 +114,8 @@ export default function AuthDialog({ open, onClose, onAuthSuccess }: AuthDialogP
             <Box
                 sx={{
                     position: "relative",
-                    width: 380,
+                    width: "90%",
+                    maxWidth: 380,
                     bgcolor: "#f5f3ff",
                     borderRadius: 4,
                     p: 3,

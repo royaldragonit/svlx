@@ -61,10 +61,12 @@ export default function CarCard({
   handleSubmitComment,
   onShare,
 }: Props) {
+  
   const imageUrl = car.image;
   const videoUrl =
     car.media?.find((m) => m.mediaType === "video")?.url || undefined;
-
+  console.log("car",car);
+  
   const [openImageViewer, setOpenImageViewer] = React.useState(false);
 
   const handleOpenImage = () => {
@@ -94,138 +96,181 @@ export default function CarCard({
   return (
     <>
       <Card>
-        <div style={{ display: "flex", alignItems: "stretch" }}>
-          <Box
-            sx={{
-              width: "20%",
-              minWidth: 160,
-              display: "flex",
-              flexDirection: "column",
-              gap: 0.5,
-              p: 0.5,
-            }}
-          >
-            {imageUrl && (
-              <Box
-                component="img"
-                src={imageUrl}
-                alt={car.name}
-                title="Click để xem toàn màn hình"
-                onClick={handleOpenImage}
+        <CardContent>
+
+          {/* HEADER: Avatar + Name + Rank */}
+          <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+            <Box
+              component="img"
+              src={car.avatar || "/default-avatar.png"}
+              alt={car.authorName}
+              sx={{
+                width: 42,
+                height: 42,
+                borderRadius: "50%",
+                objectFit: "cover",
+                mr: 1.2,
+              }}
+            />
+
+            <Box>
+              <Typography
+                component={Link}
+                href={`/user/${car.authorId}`}
                 sx={{
-                  width: "100%",
-                  height: mediaHeight,
-                  objectFit: "cover",
-                  borderRadius: 1,
-                  cursor: "pointer",
+                  fontWeight: 700,
+                  color: "#2563eb",
+                  textDecoration: "none",
                 }}
-              />
-            )}
-
-            {videoUrl && (
-              <Box
-                component="video"
-                src={videoUrl}
-                controls
-                muted
-                sx={{
-                  width: "100%",
-                  height: mediaHeight,
-                  borderRadius: 1,
-                  objectFit: "cover",
-                }}
-              />
-            )}
-          </Box>
-
-          <Box sx={{ flexGrow: 1 }}>
-            <CardContent>
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                  <Box component="span">
-                    <Link
-                      href={`/user/${car.authorId}`}
-                      style={{
-                        textDecoration: "none",
-                        color: "#2563eb",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {car.authorName}
-                    </Link>
-                    {" "}
-                    <Box
-                      component="span"
-                      sx={{
-                        color: getRankColor(car.authorRank),
-                        fontWeight: 600,
-                      }}
-                    >
-                      ({car.authorRank})
-                    </Box>
-                  </Box>
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {createdAtText}
-                </Typography>
-              </Box>
-
-              <Typography variant="h6">{car.name}</Typography>
-
-              <Typography variant="body2">
-                {car.type} | {car.location}
+              >
+                {car.authorName}
               </Typography>
 
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                {truncateText(car.description, 200)}
-              </Typography>
-            </CardContent>
-
-            <Divider />
-
-            <Box sx={{ p: "6px 16px" }}>
-              <Typography variant="caption" color="text.secondary">
-                {likeDisplay} lượt thích • {commentDisplay} bình luận •{" "}
-                {car.shareCount} chia sẻ
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  color: getRankColor(car.authorRank),
+                  fontWeight: 600,
+                }}
+              >
+                {car.authorRank}
               </Typography>
             </Box>
-
-            <Divider />
-
-            <div style={{ display: "flex", justifyContent: "space-around" }}>
-              <Tooltip title={liked ? "Bỏ thích" : "Thích"}>
-                <IconButton onClick={toggleLike}>
-                  {liked ? <FavoriteIcon color="error" /> : <FavoriteBorderIcon />}
-                </IconButton>
-              </Tooltip>
-
-              <Tooltip title="Bình luận">
-                <IconButton onClick={toggleCommentPanel}>
-                  <ChatBubbleOutlineIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Chia sẻ">
-                <IconButton onClick={onShare}>
-                  <ShareOutlinedIcon />
-                </IconButton>
-              </Tooltip>
-            </div>
-
-            {openComments && (
-              <>
-                <Divider />
-                <CommentList comments={comments} />
-                <Divider />
-                <CommentComposer
-                  open
-                  onClose={toggleCommentPanel}
-                  onSubmit={handleSubmitComment}
-                />
-              </>
-            )}
           </Box>
-        </div>
+
+          {/* Time */}
+          <Typography variant="caption" color="text.secondary">
+            {createdAtText}
+          </Typography>
+
+          {/* TEXT */}
+          <Typography variant="body1" sx={{ mt: 1 }}>
+            {truncateText(car.description, 350)}
+          </Typography>
+
+          {/* MEDIA */}
+          {(() => {
+            const img = imageUrl;
+            const vid = videoUrl;
+
+            if (img && vid) {
+              return (
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1,
+                    mt: 1.5,
+                    height: 220,
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={img}
+                    onClick={handleOpenImage}
+                    sx={{
+                      width: "50%",
+                      height: "100%",
+                      objectFit: "cover",
+                      borderRadius: 1,
+                      cursor: "pointer",
+                    }}
+                  />
+                  <Box
+                    component="video"
+                    src={vid}
+                    controls
+                    muted
+                    sx={{
+                      width: "50%",
+                      height: "100%",
+                      objectFit: "cover",
+                      borderRadius: 1,
+                    }}
+                  />
+                </Box>
+              );
+            }
+
+            if (img) {
+              return (
+                <Box
+                  component="img"
+                  src={img}
+                  onClick={handleOpenImage}
+                  sx={{
+                    mt: 1.5,
+                    width: "100%",
+                    height: 260,
+                    objectFit: "cover",
+                    borderRadius: 1,
+                    cursor: "pointer",
+                  }}
+                />
+              );
+            }
+
+            if (vid) {
+              return (
+                <Box
+                  component="video"
+                  src={vid}
+                  controls
+                  muted
+                  sx={{
+                    mt: 1.5,
+                    width: "100%",
+                    height: 260,
+                    objectFit: "cover",
+                    borderRadius: 1,
+                  }}
+                />
+              );
+            }
+
+            return null;
+          })()}
+
+          {/* LIKE - COMMENT - SHARE COUNT */}
+          <Box sx={{ mt: 1.5 }}>
+            <Typography variant="caption" color="text.secondary">
+              {likeDisplay} thích • {commentDisplay} bình luận • {car.shareCount} chia sẻ
+            </Typography>
+          </Box>
+
+          <Divider sx={{ mt: 1, mb: 1 }} />
+
+          {/* ACTION BUTTONS */}
+          <Box sx={{ display: "flex", justifyContent: "space-around" }}>
+            <IconButton onClick={toggleLike}>
+              {liked ? <FavoriteIcon color="error" /> : <FavoriteBorderIcon />}
+            </IconButton>
+
+            <IconButton onClick={toggleCommentPanel}>
+              <ChatBubbleOutlineIcon />
+            </IconButton>
+
+            <IconButton onClick={onShare}>
+              <ShareOutlinedIcon />
+            </IconButton>
+          </Box>
+
+          {/* COMMENTS */}
+          {openComments && (
+            <>
+              <Divider sx={{ mt: 1 }} />
+              <CommentList comments={comments} />
+              <Divider />
+              <CommentComposer
+                open
+                onClose={toggleCommentPanel}
+                onSubmit={handleSubmitComment}
+              />
+            </>
+          )}
+
+        </CardContent>
       </Card>
+
 
       {imageUrl && (
         <Dialog
