@@ -62,6 +62,7 @@ type CarUiItem = {
 export type PublishPayload = {
   title: string;
   body: string;
+  plateNumber: string;
   tags: string;
   date: string;
   time: string;
@@ -153,7 +154,7 @@ export default function HomePageClient() {
             : [],
           avatar: r.authorAvatar,
           likedByCurrentUser: r.likedByCurrentUser ?? false,
-          authorId: Number(r.author?.id ?? r.authorId ?? 0),
+          authorId: Number(r.author?.id ?? r.authorId ?? 0)
         }));
 
         const likedMap: Record<number, boolean> = {};
@@ -243,6 +244,7 @@ export default function HomePageClient() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title: payload.title,
+            plateNumber:payload.plateNumber,
             body: payload.body,
             tags: payload.tags,
             authorId: user?.id,

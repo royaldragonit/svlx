@@ -23,10 +23,15 @@ export default function Snowfall() {
       y: Math.random() * height,
       r: Math.random() * 3 + 1,
       speed: Math.random() * 1 + 0.5,
-      drift: Math.random() * 0.5 - 0.25
+      drift: Math.random() * 0.5 - 0.25,
     }));
 
+    let rafId = 0;
+    let running = true;
+
     const update = () => {
+      if (!running) return;
+
       ctx.clearRect(0, 0, width, height);
 
       snowflakes.forEach((s) => {
@@ -40,14 +45,22 @@ export default function Snowfall() {
 
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = Math.random() > 0.5 ? "#ff3b3b" : "#2ecc71";
+        ctx.fillStyle = Math.random() > 0.5 ? "#ff3b3b" : "#2ecc71"; // đỏ + xanh lá
         ctx.fill();
       });
 
-      requestAnimationFrame(update);
+      rafId = requestAnimationFrame(update);
     };
 
     update();
+
+    // stop after 10 seconds
+    const stopTimer = setTimeout(() => {
+      running = false;
+      cancelAnimationFrame(rafId);
+      ctx.clearRect(0, 0, width, height);
+      if (canvas.parentNode) canvas.remove();
+    }, 10000);
 
     const onResize = () => {
       width = window.innerWidth;
@@ -57,7 +70,13 @@ export default function Snowfall() {
     };
 
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+
+    return () => {
+      running = false;
+      clearTimeout(stopTimer);
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", onResize);
+    };
   }, []);
 
   return (
