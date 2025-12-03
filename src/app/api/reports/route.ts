@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
 
   if (search) {
     where.OR = [
-      { plateNumber: { contains: search, mode: "insensitive" } },
+      { plateNumber: { contains: search.toUpperCase(), mode: "insensitive" } },
       { title: { contains: search, mode: "insensitive" } },
       { description: { contains: search, mode: "insensitive" } },
       { location: { contains: search, mode: "insensitive" } },
@@ -182,6 +182,13 @@ export async function POST(req: NextRequest) {
     const description = (bodyJson.body || "").trim();
     const tags = (bodyJson.tags || "").trim();
     const plateNumber = (bodyJson.plateNumber || "").trim();
+    const plateRegex = /^[0-9]{2}[A-Z]-[0-9]{4,5}$/;
+    if (!plateRegex.test(plateNumber.toUpperCase())) {
+      return NextResponse.json(
+        { error: "Biển số không hợp lệ. Định dạng hợp lệ: 51F-12345" },
+        { status: 400 }
+      );
+    }
     const carType = (bodyJson.carType || "").trim();
     const location = (bodyJson.location || "").trim();
     const media = Array.isArray(bodyJson.media) ? bodyJson.media : [];
