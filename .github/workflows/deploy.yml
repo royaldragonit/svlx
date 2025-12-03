@@ -37,6 +37,8 @@ jobs:
             npx prisma migrate deploy
             npx prisma generate
 
+            set -e
+            
             npm run build
 
             pm2 restart svlx || pm2 start npm --name svlx -- start
