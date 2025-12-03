@@ -16,4 +16,5 @@ export type CarItem = {
   authorRank: "Bạc" | "Vàng" | "Kim Cương";
   createdAt: string;
   authorId: number;
+  plateNumber: string;
 };

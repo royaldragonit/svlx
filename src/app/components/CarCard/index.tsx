@@ -142,8 +142,13 @@ export default function CarCard({
             {createdAtText}
           </Typography>
           {/* TITLE */}
-          <Typography variant="h6" sx={{ mt: 1, fontWeight: 700 }}>
-            {car.name}
+          <Typography variant="h6" sx={{ mt: 1 }}>
+            <Box component="span" sx={{ fontWeight: 600,color:'#eb4444ff' }}>
+              [{car.plateNumber}] 
+            </Box>
+            <Box component="span" sx={{ fontWeight: 600 }}>
+               - {car.name}
+            </Box>
           </Typography>
           {/* TEXT */}
           <Typography variant="body1" sx={{ mt: 1 }}>

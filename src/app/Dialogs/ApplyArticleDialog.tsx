@@ -55,6 +55,7 @@ type Props = {
   onClose: () => void;
   onPublish?: (payload: {
     title: string;
+    plateNumber: string;
     body: string;
     tags: string;
     date: string;
@@ -76,6 +77,7 @@ type MediaItem = {
 export default function ApplyArticleDialog({ open, onClose, onPublish }: Props) {
   const [title, setTitle] = React.useState("");
   const [body, setBody] = React.useState("");
+  const [plateNumber, setplateNumber] = React.useState("");
   const [tags, setTags] = React.useState("");
   const [date, setDate] = React.useState("");
   const [time, setTime] = React.useState("");
@@ -122,6 +124,7 @@ export default function ApplyArticleDialog({ open, onClose, onPublish }: Props) 
 
     const success = await onPublish({
       title,
+      plateNumber,
       body,
       tags,
       date,
@@ -141,6 +144,7 @@ export default function ApplyArticleDialog({ open, onClose, onPublish }: Props) 
       onClose();
       setTitle("");
       setBody("");
+      setplateNumber("");
       setTags("");
       setDate("");
       setTime("");
@@ -161,7 +165,13 @@ export default function ApplyArticleDialog({ open, onClose, onPublish }: Props) 
 
       <DialogContent sx={contentBox}>
         <TextField
-          placeholder="Tiêu đề"
+          placeholder="Biển số xe. Ví dụ: 30E-22222"
+          value={plateNumber}
+          onChange={(e) => setplateNumber(e.target.value)}
+          sx={titleInput}
+        />
+        <TextField
+          placeholder="Tiêu đề: Vượt phải khôn lỏi"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           fullWidth
