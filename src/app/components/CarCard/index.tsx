@@ -155,6 +155,9 @@ export default function CarCard({
             const img = imageUrl;
             const vid = videoUrl;
 
+            // ============================
+            // 1) BOTH image + video
+            // ============================
             if (img && vid) {
               return (
                 <Box
@@ -162,7 +165,7 @@ export default function CarCard({
                     display: "flex",
                     gap: 1,
                     mt: 1.5,
-                    height: 220,
+                    height: { xs: 220, sm: 320, md: 420 },   // responsive height
                   }}
                 >
                   <Box
@@ -177,6 +180,7 @@ export default function CarCard({
                       cursor: "pointer",
                     }}
                   />
+
                   <Box
                     component="video"
                     src={vid}
@@ -193,6 +197,9 @@ export default function CarCard({
               );
             }
 
+            // ============================
+            // 2) ONLY image
+            // ============================
             if (img) {
               return (
                 <Box
@@ -202,7 +209,7 @@ export default function CarCard({
                   sx={{
                     mt: 1.5,
                     width: "100%",
-                    height: 260,
+                    height: { xs: 260, sm: 380, md: 480 },    // responsive
                     objectFit: "cover",
                     borderRadius: 1,
                     cursor: "pointer",
@@ -211,6 +218,9 @@ export default function CarCard({
               );
             }
 
+            // ============================
+            // 3) ONLY video
+            // ============================
             if (vid) {
               return (
                 <Box
@@ -221,7 +231,7 @@ export default function CarCard({
                   sx={{
                     mt: 1.5,
                     width: "100%",
-                    height: 260,
+                    height: { xs: 260, sm: 380, md: 480 },     // responsive
                     objectFit: "cover",
                     borderRadius: 1,
                   }}
@@ -231,6 +241,7 @@ export default function CarCard({
 
             return null;
           })()}
+
 
           {/* LIKE - COMMENT - SHARE COUNT */}
           <Box sx={{ mt: 1.5 }}>

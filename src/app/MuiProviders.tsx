@@ -27,6 +27,7 @@ import { useEffect, useState } from "react";
 import AuthDialog from "./Dialogs/AuthDialog";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Snowfall from "./components/Snowfall";
 
 const theme = createTheme({});
 
@@ -402,6 +403,7 @@ export default function MuiProviders({ children }: { children: React.ReactNode }
 
       </ThemeProvider>
       <ToastContainer />
+      <Snowfall/>
     </AppRouterCacheProvider>
   );
 }
