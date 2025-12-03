@@ -62,7 +62,8 @@ type Props = {
     meridiem: "AM" | "PM";
     scheduled: boolean;
     media: MediaPayload[];
-  }) => void;
+  }) => Promise<boolean>;
+
 };
 
 type MediaItem = {
@@ -81,6 +82,7 @@ export default function ApplyArticleDialog({ open, onClose, onPublish }: Props) 
   const [meridiem, setMeridiem] = React.useState<"AM" | "PM">("AM");
   const [scheduled, setScheduled] = React.useState(false);
   const [media, setMedia] = React.useState<MediaItem[]>([]);
+  const [loading, setLoading] = React.useState(false);
 
   const hasImage = React.useMemo(
     () => media.some((m) => m.kind === "image"),
@@ -113,8 +115,12 @@ export default function ApplyArticleDialog({ open, onClose, onPublish }: Props) 
     setMedia((prev) => prev.filter((m) => m.id !== id));
   };
 
-  const handlePublish = () => {
-    onPublish?.({
+  const handlePublish = async () => {
+    if (!onPublish) return;
+
+    setLoading(true);
+
+    const success = await onPublish({
       title,
       body,
       tags,
@@ -129,15 +135,20 @@ export default function ApplyArticleDialog({ open, onClose, onPublish }: Props) 
       })),
     });
 
-    onClose();
-    setTitle("");
-    setBody("");
-    setTags("");
-    setDate("");
-    setTime("");
-    setScheduled(false);
-    setMedia([]);
+    setLoading(false);
+
+    if (success) {
+      onClose();
+      setTitle("");
+      setBody("");
+      setTags("");
+      setDate("");
+      setTime("");
+      setScheduled(false);
+      setMedia([]);
+    }
   };
+
 
   return (
     <Dialog open={open} onClose={onClose} PaperProps={{ sx: paper }}>
@@ -232,9 +243,15 @@ export default function ApplyArticleDialog({ open, onClose, onPublish }: Props) 
       </DialogContent>
 
       <DialogActions sx={actionsBox}>
-        <Button variant="contained" sx={publishBtn} onClick={handlePublish}>
-          Đăng
+        <Button
+          variant="contained"
+          sx={publishBtn}
+          onClick={handlePublish}
+          disabled={loading}
+        >
+          {loading ? "Đang đăng..." : "Đăng"}
         </Button>
+
       </DialogActions>
     </Dialog>
   );

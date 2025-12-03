@@ -25,6 +25,8 @@ import Link from "next/link";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useEffect, useState } from "react";
 import AuthDialog from "./Dialogs/AuthDialog";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const theme = createTheme({});
 
@@ -399,6 +401,7 @@ export default function MuiProviders({ children }: { children: React.ReactNode }
         `}</style>
 
       </ThemeProvider>
+      <ToastContainer />
     </AppRouterCacheProvider>
   );
 }
