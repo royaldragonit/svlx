@@ -86,8 +86,8 @@ export default function AuthDialog({ open, onClose, onAuthSuccess }: AuthDialogP
     };
 
     const handleGoogleLogin = () => {
-        if (loading) return;
-        window.location.href = "/api/auth/google";
+        if (loading) return
+        window.location.href = `/api/auth/google?return_to=${encodeURIComponent(window.location.pathname)}`;
     };
 
     const handleFacebookLogin = () => {
@@ -114,7 +114,8 @@ export default function AuthDialog({ open, onClose, onAuthSuccess }: AuthDialogP
             <Box
                 sx={{
                     position: "relative",
-                    width: 380,
+                    width: "90%",
+                    maxWidth: 380,
                     bgcolor: "#f5f3ff",
                     borderRadius: 4,
                     p: 3,

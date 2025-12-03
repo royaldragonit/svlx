@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
+  const returnTo = url.searchParams.get("state") || "/";
   if (!code) {
     return NextResponse.redirect((process.env.OAUTH_SUCCESS_REDIRECT || "/") + "?oauth=google_error");
   }
@@ -78,8 +79,8 @@ export async function GET(req: NextRequest) {
     { expiresIn: "7d" }
   );
 
-  const redirectTo = process.env.OAUTH_SUCCESS_REDIRECT || "/";
-  const res = NextResponse.redirect(redirectTo);
+  const redirectTo = process.env.OAUTH_SUCCESS_REDIRECT || "";
+  const res = NextResponse.redirect(redirectTo + returnTo);
 
   res.cookies.set("auth_token", token, {
     httpOnly: true,

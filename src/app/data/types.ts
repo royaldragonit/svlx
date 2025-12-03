@@ -12,6 +12,7 @@ export type CarItem = {
   commentCount?: number;
   shareCount?: number;
   authorName: string;
+  avatar: string;
   authorRank: "Bạc" | "Vàng" | "Kim Cương";
   createdAt: string;
   authorId: number;

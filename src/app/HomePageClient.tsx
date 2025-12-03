@@ -34,6 +34,7 @@ import ApplyArticleDialog from "./Dialogs/ApplyArticleDialog";
 import AuthDialog from "./Dialogs/AuthDialog";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSearchParams } from "next/navigation";
+import { toast } from "react-toastify";
 
 type MediaUiItem = {
   mediaType: "image" | "video" | "other";
@@ -124,10 +125,11 @@ export default function HomePageClient() {
         if (!res.ok) return;
 
         const data = await res.json();
+        console.log("Data", data);
 
         const mapped = data.map((r: any) => ({
           id: r.id,
-          name: `${r.plateNumber} - ${r.title}`,
+          name: `${r.title}`,
           plateNumber: r.plateNumber,
           description: r.description,
           type: r.carType ?? "",
@@ -149,6 +151,7 @@ export default function HomePageClient() {
               url: m.url,
             }))
             : [],
+          avatar: r.authorAvatar,
           likedByCurrentUser: r.likedByCurrentUser ?? false,
           authorId: Number(r.author?.id ?? r.authorId ?? 0),
         }));
@@ -207,7 +210,7 @@ export default function HomePageClient() {
     setShareLink(link);
     setShareOpen(true);
   };
-  const handlePublishArticle = async (payload: PublishPayload) => {
+  const handlePublishArticle = async (payload: PublishPayload): Promise<boolean> => {
     await ensureLoggedIn(async () => {
       try {
         const imageFile = payload.media.find((m: { kind: string }) => m.kind === "image")?.file || null;
@@ -248,11 +251,12 @@ export default function HomePageClient() {
         });
 
         const created: any = await res.json(); // API chưa typed nên dùng any
+        console.log("Created", created);
 
         setCars((prev) => [
           {
             id: created.id,
-            name: `${created.plateNumber} - ${created.title}`,
+            name: `${created.title}`,
             plateNumber: created.plateNumber,
             description: created.description,
             type: created.carType ?? "",
@@ -266,6 +270,7 @@ export default function HomePageClient() {
               created.media?.find((m: any) => m.mediaType === "image")?.url ||
               "/cars/car-placeholder.png",
             authorName: created.author?.displayName ?? "Ẩn danh",
+            avatar: created.authorAvatar,
             authorRank: created.author?.rank ?? "Bạc",
             createdAt: created.createdAt,
             media: created.media ?? [],
@@ -276,10 +281,15 @@ export default function HomePageClient() {
         ]);
 
         setPage(1);
+        toast.success("Đăng thành công");
+        return true;
       } catch (e) {
         console.error(e);
+        toast.error("Có lỗi xảy ra, thử lại");
+        return false;
       }
     });
+    return true;
   };
   const handleSubmitCommentInternal = async (
     car: CarUiItem,
@@ -343,6 +353,7 @@ export default function HomePageClient() {
         })),
         createdAt: new Date(created.createdAt).getTime(),
         authorName: user.displayName || user.email || "User",
+        avatar: user?.avatarUrl || "",
         authorRank: user.rank || "Bạc",
       };
 
