@@ -1,3 +1,52 @@
+name: Deploy SVLX
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  deploy-prod:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add SSH key
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: Deploy to PROD
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+            APP_DIR=/home/ftpuser/ftp/upload/sucvatlaixe.com
+            cd "$APP_DIR"
+
+            git fetch origin main
+            git reset --hard origin/main
+
+            if [ -f package-lock.json ]; then
+              npm ci
+            else
+              npm install
+            fi
+
+            npx prisma migrate deploy
+            npx prisma generate
+
+            set -e
+
+            npm run build
+
+            pm2 restart svlx || pm2 start npm --name svlx -- start
+          '
+
   deploy-dev:
     if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
